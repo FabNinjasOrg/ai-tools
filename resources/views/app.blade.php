@@ -7,7 +7,10 @@
 
         <style>[x-cloak]{display:none!important}</style>
 
-        <title>AI Tools Hub - {{ config('app.name', 'Laravel') }}</title>
+        <title>LaraMind</title>
+
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+        <link rel="alternate icon" href="/favicon.ico">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -24,13 +27,13 @@
             </style>
         @endif
     </head>
-    <body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 text-slate-900 min-h-screen">
+    <body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 text-slate-900 min-h-screen flex flex-col">
 
         <!-- Navigation -->
         @include('layout.header')
 
         <!-- Hero Section -->
-        <main class="relative z-10">
+        <main class="relative z-10 flex-1">
             @yield('content')
         </main>
 

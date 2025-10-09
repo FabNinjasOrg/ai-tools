@@ -1,0 +1,31 @@
+# Docker setup
+sudo apt update
+sudo apt install -y ca-certificates curl gnupg lsb-release
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+docker --version
+sudo docker run hello-world
+
+# git install
+sudo apt install gh
+https://github.com/login/device
+
+# Run these commands on your host machine
+Set .env file
+mkdir -p storage/framework/{sessions,views,cache/data}
+mkdir -p bootstrap/cache
+chmod -R 775 storage bootstrap/cache
+
+# Run composer install
+sudo docker compose up -d --build
+sudo docker compose run --rm app composer install
+sudo docker compose exec app php artisan migrate
+sudo docker compose exec app php artisan key:generate
+
+# setup tailwind and build resources
+sudo docker compose exec app npm install
+sudo docker compose exec app npm install -D tailwindcss postcss autoprefixer
+sudo docker compose exec app npm run build

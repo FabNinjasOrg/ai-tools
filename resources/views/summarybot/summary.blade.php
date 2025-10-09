@@ -38,7 +38,7 @@
 
                         <div class="mt-3 flex items-center justify-between">
                             <div class="inline-flex items-center gap-2">
-                                <button type="button" @click="clearInput()" class="inline-flex items-center gap-2 bg-white border border-[#e3e3e0] hover:bg-gray-50 text-[#1b1b18] px-4 py-2 rounded-xl">
+                                <button type="button" @click="clearInput()" :disabled="isLoading" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl transition-colors" :class="isLoading ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white border border-[#e3e3e0] hover:bg-gray-50 text-[#1b1b18]'">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-5 w-5">
                                         <path d="M3 6h18"/>
                                         <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -119,7 +119,7 @@
                 },
                 async sendQuery() {
                     let userInput = this.newQuery.trim();
-                    if (userInput === '') return;
+                    if (userInput === '' || this.isLoading) return;
 
                     // Clear previous response
                     this.messages = [];
@@ -129,7 +129,7 @@
                     // Send the conversation to the server
                     try {
                         this.isLoading = true;
-                        let response = await fetch("{{ route('summarybot')}}", {
+                        let response = await fetch("{{ route('summarybot') }}", {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',

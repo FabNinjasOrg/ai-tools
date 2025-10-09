@@ -49,16 +49,20 @@
             </div>
 
             <!-- Input Box -->
-            <form @submit.prevent="sendQuery()" class="p-4 flex items-center space-x-2">
-                <textarea x-model="newQuery" type="text" placeholder="Type a message..."
-                    @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); sendQuery() }"
-                    class="flex-1 px-4 py-2 border border-grey-100 rounded-xl"></textarea>
-                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-5 w-5">
-                        <path d="M22 2L11 13"/>
-                        <path d="M22 2l-7 20-4-9-9-4 20-7z"/>
-                    </svg>
-                </button>
+            <form @submit.prevent="sendQuery()" class="p-4">
+                <div class="relative w-full rounded-2xl border border-[#d9d9e3] bg-[#f7f7f8] shadow-sm">
+                    <textarea x-model="newQuery" x-ref="input" type="text" placeholder="Message Chat Assistant"
+                        @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); sendQuery() }"
+                        class="w-full bg-transparent border-0 outline-none focus:ring-0 resize-none pr-12 pl-4 py-3 text-[15px] leading-6 text-[#1b1b18] placeholder-[#8e8ea0]"></textarea>
+                    <button type="submit" :disabled="isLoading || !newQuery.trim()"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full inline-flex items-center justify-center transition-colors disabled:cursor-not-allowed"
+                        :class="(isLoading || !newQuery.trim()) ? 'bg-[#d9d9e3] text-[#8e8ea0]' : 'bg-gradient-to-br from-blue-500 to-indigo-500 text-white hover:opacity-90'">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-5 w-5">
+                            <path d="M12 19V5"/>
+                            <path d="M5 12l7-7 7 7"/>
+                        </svg>
+                    </button>
+                </div>
             </form>
         </div>
 @endsection
@@ -81,7 +85,7 @@
                 isLoading: false,
                 async sendQuery() {
                     let userInput = this.newQuery.trim();
-                    if (userInput === '') return;
+                    if (userInput === '' || this.isLoading) return;
 
                     // Add user message to conversation
                     this.messages.push({role: 'user', content: userInput});
@@ -91,7 +95,7 @@
                     // Send the conversation to the server
                     try {
                         this.isLoading = true;
-                        let response = await fetch("{{ route('chatbot')}}", {
+                        let response = await fetch("{{ route('chatbot') }}", {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
