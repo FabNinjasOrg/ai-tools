@@ -18,6 +18,10 @@
                     {{-- Media Analysis: Green-emerald theme --}}
                     <div class="h-8 w-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 text-white inline-flex items-center justify-center font-bold text-sm">LM</div>
                     <span class="text-xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">LaraMind</span>
+                @elseif(request()->routeIs('face_finder*'))
+                    {{-- Face Finder: Green-emerald theme --}}
+                    <div class="h-8 w-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 text-white inline-flex items-center justify-center font-bold text-sm">LM</div>
+                    <span class="text-xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">LaraMind</span>
                 @else
                     {{-- Default fallback --}}
                     <div class="h-8 w-8 rounded-lg bg-gradient-to-br from-slate-500 to-slate-600 text-white inline-flex items-center justify-center font-bold text-sm">LM</div>
@@ -25,7 +29,7 @@
                 @endif
             </a>
         </div>
-        @if(! request()->routeIs('home'))
+        @if(! request()->routeIs('home') && ! request()->routeIs('face_finder.public.show'))
         <div class="flex items-center">
             <a href="{{ route('home') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors font-medium">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
