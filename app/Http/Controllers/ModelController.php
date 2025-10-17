@@ -34,12 +34,6 @@ class ModelController extends Controller
         return view('mediaAnalysis.media-analysis', compact('llmModel'));
     }
 
-    public function faceFinder()
-    {
-        $llmModel = 'llama3.2';
-        return view('faceFinder.face-finder', compact('llmModel'));
-    }
-
     public function chatBot(Request $request)
     {
         $userQuery = $request->input('query');

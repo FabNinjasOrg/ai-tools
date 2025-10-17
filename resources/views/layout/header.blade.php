@@ -18,10 +18,6 @@
                     {{-- Media Analysis: Green-emerald theme --}}
                     <div class="h-8 w-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 text-white inline-flex items-center justify-center font-bold text-sm">LM</div>
                     <span class="text-xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">LaraMind</span>
-                @elseif(request()->routeIs('face_finder*'))
-                    {{-- Face Finder: Green-emerald theme --}}
-                    <div class="h-8 w-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 text-white inline-flex items-center justify-center font-bold text-sm">LM</div>
-                    <span class="text-xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">LaraMind</span>
                 @else
                     {{-- Default fallback --}}
                     <div class="h-8 w-8 rounded-lg bg-gradient-to-br from-slate-500 to-slate-600 text-white inline-flex items-center justify-center font-bold text-sm">LM</div>

@@ -21,4 +21,19 @@ class Album extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function otpAttempts(): HasMany
+    {
+        return $this->hasMany(OtpVerificationAttempt::class);
+    }
+
+    public function latestPhotos(): HasMany
+    {
+        return $this->hasMany(Photo::class)->latest();
+    }
+
+    public function scopeOwnedBy($query, $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
 }

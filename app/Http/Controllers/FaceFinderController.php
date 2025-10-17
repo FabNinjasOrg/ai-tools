@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Album;
 use App\Models\Photo;
+use App\Models\OtpVerificationAttempt;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -14,19 +15,61 @@ use Illuminate\Support\Facades\Http;
 
 class FaceFinderController extends Controller
 {
+    public function faceFinder()
+    {
+        return view('faceFinder.home');
+    }
+
+    public function uploadAlbumPage()
+    {
+        return view('faceFinder.face-finder');
+    }
+
     public function show(string $uuid)
     {
-        return view('faceFinder.album', ['uuid' => $uuid]);
+        $album = Album::query()->where('uuid', $uuid)->first();
+        $attemptTotal = 0;
+        $attemptUniquePhones = 0;
+        $noMatchCount = 0;
+
+        if ($album) {
+            $attemptTotal = $album->otpAttempts()->count();
+
+            $attemptUniquePhones = $album->otpAttempts()
+                ->whereNotNull('phone_number')
+                ->distinct('phone_number')
+                ->count('phone_number');
+
+            $noMatchCount =  $album->otpAttempts()->where('matched_found_photos', 0)->count();
+        }
+
+        return view('faceFinder.album', [
+            'uuid' => $uuid,
+            'attemptTotal' => $attemptTotal,
+            'attemptUniquePhones' => $attemptUniquePhones,
+            'noMatchCount' => $noMatchCount
+        ]);
     }
 
     public function index(Request $request)
     {
         $albums = Album::query()
+            ->where('user_id', auth()->id())
+            ->withCount('photos')
             ->orderByDesc('created_at')
-            ->limit(50)
-            ->get(['id', 'uuid', 'name', 'zip_size_bytes as size', 'photos_count as count']);
+            ->get(['id', 'uuid', 'name', 'zip_size_bytes']);
 
-        return response()->json(['albums' => $albums]);
+        return response()->json([
+            'albums' => $albums->map(function ($a) {
+                return [
+                    'id' => $a->id,
+                    'uuid' => $a->uuid,
+                    'name' => $a->name,
+                    'size' => $a->zip_size_bytes,
+                    'count' => $a->photos_count,
+                ];
+            })
+        ]);
     }
 
     public function storeZip(Request $request)
@@ -41,47 +84,41 @@ class FaceFinderController extends Controller
         $baseName = $request->input('name') ?: preg_replace('/\.zip$/i', '', $originalName);
 
         $uuid = (string) Str::uuid();
-        $userId = optional($request->user())->id;
-        if (!$userId) {
-            $userId = User::query()->value('id');
-        }
-        if (!$userId) {
-            $user = User::create([
-                'name' => 'Default User',
-                'email' => 'default@example.com',
-                'password' => bcrypt('password'),
-            ]);
-            $userId = $user->id;
-        }
+        $userId = auth()->id();
 
-        // Store zip privately
-        $zipPath = "albums/{$uuid}/{$originalName}";
-        Storage::disk('local')->putFileAs("albums/{$uuid}", $zipFile, $originalName);
+        $s3Folder = "FaceFinder/Albums/{$uuid}";
 
-        // Extract to public disk
-        $publicDir = Storage::disk('public')->path("albums/{$uuid}");
-        if (! is_dir($publicDir)) {
-            mkdir($publicDir, 0775, true);
+        // Store ZIP privately on S3
+        // Storage::disk('s3')->putFileAs($s3Folder, $zipFile, $originalName, 'public');
+        // $zipPath = "{$s3Folder}/{$originalName}";
+
+        // Extract ZIP temporarily locally
+        $localTempDir = storage_path("app/tmp_zip_extract/{$uuid}");
+        if (!is_dir($localTempDir)) {
+            mkdir($localTempDir, 0775, true);
         }
 
-        $tmpZipPath = Storage::disk('local')->path($zipPath);
+        $localTempZipPath = $localTempDir . DIRECTORY_SEPARATOR . $originalName;
+        file_put_contents($localTempZipPath, file_get_contents($zipFile));
+
         $zip = new ZipArchive();
-        if ($zip->open($tmpZipPath) !== true) {
+        if ($zip->open($localTempZipPath) !== true) {
             return response()->json(['message' => 'Failed to open ZIP.'], 422);
         }
 
         $numExtractedPhotos = 0;
         $allowedExtensions = ['png', 'jpg', 'jpeg', 'webp'];
+        $toInsert = [];
+
+        // Extract each valid photo and upload to S3
         for ($entryIndex = 0; $entryIndex < $zip->numFiles; $entryIndex++) {
             $zipEntryStat = $zip->statIndex($entryIndex);
             $zipEntryName = $zipEntryStat['name'] ?? '';
 
-            // Skip directories
+            // Skip directories and unwanted files
             if (str_ends_with($zipEntryName, '/')) continue;
 
             $zipEntryNameLower = strtolower($zipEntryName);
-
-            // Skip macOS metadata and hidden files
             if (
                 str_starts_with($zipEntryNameLower, '__macosx/') ||
                 str_contains($zipEntryNameLower, '/._') ||
@@ -94,12 +131,39 @@ class FaceFinderController extends Controller
             $fileContents = $zip->getFromIndex($entryIndex);
             if ($fileContents === false) continue;
 
-            $fileName = basename($zipEntryName);
-            $destinationPath = rtrim($publicDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $fileName;
-            file_put_contents($destinationPath, $fileContents);
+            $filename = basename($zipEntryName);
+            $photoS3Path = "{$s3Folder}/{$filename}";
+
+            // Upload to S3 under FaceFinder/Albums/{uuid}/{filename}
+            Storage::disk('s3')->put($photoS3Path, $fileContents, 'private');
+
+            // Save temporarily locally for embedding
+            $localTempPhoto = $localTempDir . DIRECTORY_SEPARATOR . $filename;
+            file_put_contents($localTempPhoto, $fileContents);
+
+            // Call FastAPI for embedding
+            $imageEmbeddingJson = $this->EmbeddingTheImage($localTempPhoto);
+
+            // Add to bulk insert
+            $toInsert[] = [
+                'album_id' => null, // Will update after creating album
+                'filename' => $filename,
+                'path' => $photoS3Path,
+                'size_bytes' => strlen($fileContents),
+                'embedding_json' => $imageEmbeddingJson ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+
             $numExtractedPhotos++;
+
+            // Clean up local temp photo
+            @unlink($localTempPhoto);
         }
+
         $zip->close();
+        @unlink($localTempZipPath);
+        @rmdir($localTempDir);
 
         // Create album record
         $album = Album::create([
@@ -107,37 +171,21 @@ class FaceFinderController extends Controller
             'uuid' => $uuid,
             'name' => $baseName,
             'zip_filename' => $originalName,
-            'zip_path' => $zipPath,
+            'zip_path' => ' ',
             'zip_size_bytes' => $zipFile->getSize() ?: 0,
-            'photos_count' => 0,
+            'photos_count' => $numExtractedPhotos,
         ]);
 
-        // Insert photos
-        $publicDisk = Storage::disk('public');
-        $files = glob($publicDisk->path("albums/{$uuid}/*"));
-        $toInsert = [];
-        foreach ($files as $path) {
-            if (!is_file($path)) continue;
-            $filename = basename($path);
-
-           // Call FastAPI for image embedding
-           $imageEmbeddingJson = $this->EmbeddingTheImage($path);
-
-            $toInsert[] = [
-                'album_id' => $album->id,
-                'filename' => $filename,
-                'path' => "albums/{$uuid}/{$filename}",
-                'size_bytes' => filesize($path) ?: 0,
-                'embedding_json'   => $imageEmbeddingJson ?? null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
+        // Update album_id in photo data and insert
+        foreach ($toInsert as &$photoData) {
+            $photoData['album_id'] = $album->id;
         }
         if (!empty($toInsert)) {
             Photo::insert($toInsert);
         }
 
-        $album->photos_count = count($toInsert);
+        // Update album photo count
+        $album->photos_count = $numExtractedPhotos;
         $album->save();
 
         return response()->json([
@@ -156,7 +204,7 @@ class FaceFinderController extends Controller
         $album = Album::query()->where('uuid', $uuid)->firstOrFail(['id','uuid','name','public_url']);
 
         $page = max(1, (int) $request->query('page', 1));
-        $perPage = min(60, max(12, (int) $request->query('per_page', 24)));
+        $perPage = min(60, $request->query('per_page', 24));
         $offset = ($page - 1) * $perPage;
 
         $photos = Photo::query()
@@ -175,9 +223,31 @@ class FaceFinderController extends Controller
                 'public_url' => $album->public_url,
             ],
             'photos' => $photos->map(function($p){
+                // Generate the image url
+                // $contentDisposition = 'inline';
+                // $ext = strtolower(pathinfo($p->filename, PATHINFO_EXTENSION));
+                // $mimeMap = [
+                //     'jpg' => 'image/jpeg',
+                //     'jpeg' => 'image/jpeg',
+                //     'png' => 'image/png',
+                //     'webp' => 'image/webp'
+                // ];
+                // $mime = $mimeMap[$ext];
+
+                // $headers = [
+                //     'Content-Type' => $mime,
+                //     'Content-Disposition' => $contentDisposition.'; filename="'.$p->filename.'"'
+                // ];
+                // $photoLink = Storage::disk('s3')->response($p->path, $p->filename, $headers, $contentDisposition);
+
+                $photoLink = Storage::disk('s3')->temporaryUrl(
+                    $p->path,
+                    now()->addMinutes(15)
+                );
+
                 return [
                     'id' => $p->id,
-                    'src' => asset('storage/'.$p->path),
+                    'src' => $photoLink,
                     'size' => $p->size_bytes,
                 ];
             }),
@@ -203,6 +273,33 @@ class FaceFinderController extends Controller
         return response()->json(['public_url' => $publicUrl]);
     }
 
+    public function deleteAlbum(string $uuid, Request $request)
+    {
+        $album = Album::query()->where('uuid', $uuid)->firstOrFail();
+
+        try {
+            $s3 = Storage::disk('s3');
+            $s3Folder = "FaceFinder/Albums/{$album->uuid}";
+
+            // Delete all files in the album folder (ZIP + photos)
+            if ($s3->exists($s3Folder)) {
+                $s3->deleteDirectory($s3Folder);
+            }
+
+            // Delete OTP attempts for this album
+            // OtpVerificationAttempt::query()->where('album_id', $album->id)->delete();
+
+            // Finally delete album
+            $album->delete();
+
+            // Redirect back to upload albums page
+            return redirect()->route('face_finder.upload_album')->with('status', 'album_deleted');
+        } catch (\Throwable $e) {
+            Log::error('Failed to delete album', ['uuid' => $uuid, 'error' => $e->getMessage()]);
+            return back()->withErrors(['delete' => 'Failed to delete album']);
+        }
+    }
+
     public function EmbeddingTheImage(string $path) {
         $response = Http::attach('file', file_get_contents($path), basename($path))
             ->timeout(60)
@@ -224,9 +321,97 @@ class FaceFinderController extends Controller
 
     public function publicAlbumPage(string $name, string $uuid)
     {
-        $albumName = Album::query()->where('uuid', $uuid)->value('name') ?? 'Album';
+        $albumName = Album::query()->where('uuid', $uuid)->value('name') ?? '';
 
         return view('faceFinder.public-album', ['uuid' => $uuid, 'albumName' => $albumName]);
+    }
+
+    public function logOtpAttempt(string $uuid, Request $request)
+    {
+        $album = Album::query()->where('uuid', $uuid)->firstOrFail(['id','uuid']);
+
+        $data = $request->validate([
+            'phone_number' => 'nullable|string|max:32',
+        ]);
+
+        try {
+            $phoneNumber = $data['phone_number'] ?? null;
+            $sessionToken = Str::random(40);
+
+            // Check if there's already an entry for this phone number and album
+            $existingAttempt = OtpVerificationAttempt::query()
+                ->where('album_id', $album->id)
+                ->where('phone_number', $phoneNumber)
+                ->first();
+
+            if ($existingAttempt) {
+                $existingAttempt->increment('attempts');
+
+                if(! isset($existingAttempt->session_token) || empty($existingAttempt->session_token)){
+                    $existingAttempt->session_token = $sessionToken;
+                    $existingAttempt->save();
+                }else{
+                    $sessionToken = $existingAttempt->session_token;
+                }
+            } else {
+                // Create new attempt
+                OtpVerificationAttempt::create([
+                    'album_id' => $album->id,
+                    'album_uuid' => $album->uuid,
+                    'phone_number' => $phoneNumber,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => substr($request->userAgent() ?? '', 0, 512),
+                    'attempts' => 1,
+                    'matched_found_photos' => 0,
+                    'session_token' => $sessionToken
+                ]);
+            }
+
+            return response()->json(['ok' => true])
+                ->cookie(
+                    'otp_session_token',
+                    $sessionToken,
+                    180,   // minutes
+                    '/',  // path
+                    null, // domain
+                    false, // secure
+                    true   // httpOnly
+                );
+        } catch (\Throwable $e) {
+            Log::error('Failed to log OTP attempt', ['error' => $e->getMessage()]);
+            return response()->json(['ok' => false], 500);
+        }
+    }
+
+    public function updateMatchedPhotosCount(string $uuid, Request $request)
+    {
+        $album = Album::query()->where('uuid', $uuid)->firstOrFail(['id','uuid']);
+
+        $data = $request->validate([
+            'phone_number' => 'nullable|string|max:32',
+            'matched_count' => 'required|integer|min:0',
+        ]);
+
+        try {
+            $phoneNumber = $data['phone_number'] ?? null;
+            $matchedCount = $data['matched_count'];
+
+            // Find the existing attempt for this phone number and album
+            $existingAttempt = OtpVerificationAttempt::query()
+                ->where('album_id', $album->id)
+                ->where('phone_number', $phoneNumber)
+                ->first();
+
+            if ($existingAttempt) {
+                // Update the matched_found_photos count
+                $existingAttempt->update(['matched_found_photos' => $matchedCount]);
+            }
+
+            return response()->json(['ok' => true]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to update matched photos count', ['error' => $e->getMessage()]);
+            return response()->json(['ok' => false], 500);
+        }
     }
 
     public function findPhotos(Request $request)
@@ -237,15 +422,6 @@ class FaceFinderController extends Controller
         ]);
 
         $photo = $request->file('photo');
-
-        // $photoPath = storage_path('app/test.png');
-        // $photo = new \Illuminate\Http\UploadedFile(
-        //     $photoPath,
-        //     'test.png',
-        //     mime_content_type($photoPath) ?: 'image/jpeg',
-        //     null,
-        //     true
-        // );
 
         $albumUuid = $request->input('album_uuid');
 
@@ -317,7 +493,10 @@ class FaceFinderController extends Controller
                             $matchedPhotos->push([
                                 'id' => $matchPhoto->id,
                                 'filename' => $matchPhoto->filename,
-                                'src' => asset('storage/' . $matchPhoto->path),
+                                'src' => Storage::disk('s3')->temporaryUrl(
+                                    $matchPhoto->path,
+                                    now()->addMinutes(15)
+                                ), // asset('storage/' . $matchPhoto->path),
                                 'similarity' => isset($result['similarity']) ? (float) $result['similarity'] : 0.0,
                             ]);
                         }
@@ -340,6 +519,28 @@ class FaceFinderController extends Controller
                 'message' => 'Error processing face comparison',
                 'matched_photos' => []
             ]);
+        }
+    }
+
+    public function checkOtpSession(string $uuid, Request $request)
+    {
+        $album = Album::query()->where('uuid', $uuid)->firstOrFail(['id','uuid']);
+
+        $sessionToken = $request->cookie('otp_session_token');
+
+        if (!$sessionToken) {
+            return response()->json(['verified' => false]);
+        }
+
+        $existingAttempt = OtpVerificationAttempt::query()
+            ->where('album_id', $album->id)
+            ->where('session_token', $sessionToken)
+            ->first();
+
+        if ($existingAttempt) {
+            return response()->json(['verified' => true]);
+        } else {
+            return response()->json(['verified' => false]);
         }
     }
 }

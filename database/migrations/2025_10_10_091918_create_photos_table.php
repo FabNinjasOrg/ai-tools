@@ -22,7 +22,7 @@ return new class extends Migration
             $table->index(['album_id']);
         });
     }
-
+    
     /**
      * Reverse the migrations.
      */
