@@ -85,7 +85,7 @@
                     <div class="absolute inset-0 bg-white/40"></div>
                 </div>
                 <div class="relative z-10 h-full flex flex-col items-center justify-center space-y-4">
-                    <div x-show="matchedPhotos.length > 0" x-cloak class="mb-3 w-full flex justify-center">
+                    <div x-show="matchedPhotos.length > 0" x-cloak class="mb-3 w-full flex justify-between items-center">
                         <div
                             class="inline-flex items-center gap-2 rounded-xl border border-green-200 border-l-4 border-l-green-500 bg-green-50 px-3 py-1.5 text-[13px] text-green-800 shadow-sm">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -96,6 +96,15 @@
                             <span class="font-medium"
                                 x-text="`${matchedPhotos.length} matched ${matchedPhotos.length === 1 ? 'photo' : 'photos'}`"></span>
                         </div>
+
+                        <!-- Download Zip Button -->
+                        <button @click="downloadMatchedPhotosZip()"
+                            class="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium shadow hover:from-purple-700 hover:to-indigo-700 inline-flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Download ZIP
+                        </button>
                     </div>
                     <div x-show="matchedPhotos.length > 0" x-cloak
                         class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4">
@@ -571,6 +580,45 @@
                     }
                 },
 
+                async downloadMatchedPhotosZip() {
+                    if (!this.matchedPhotos || this.matchedPhotos.length === 0) {
+                        this.setError('No matched photos to download');
+                        return;
+                    }
+
+                    try {
+                        this.setInfo('Preparing ZIP file...');
+
+                        const photoIds = this.matchedPhotos.map(photo => photo.id);
+
+                        // Start ZIP preparation
+                        const response = await fetch('{{ route('face_finder.public.download_matched_photos_zip', ['uuid' => $uuid]) }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({
+                                photo_ids: photoIds
+                            })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Failed to start ZIP preparation');
+                        }
+
+                        const result = await response.json();
+
+                        if (result.status === 'processing') {
+                            this.setInfo('ZIP file is being prepared. Please wait a moment and try downloading again.');
+                        }
+
+                    } catch (error) {
+                        console.error('Error starting ZIP preparation:', error);
+                        this.setError('Failed to start ZIP preparation. Please try again.');
+                    }
+                },
 
                 // Message helpers
                 clearMessages() {

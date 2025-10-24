@@ -20,6 +20,7 @@ class OtpVerificationAttempt extends Model
         'matched_found_photos',
         'session_token',
         'matched_photo_id_json',
+        'zip_s3_url',
     ];
 
     public function album(): BelongsTo

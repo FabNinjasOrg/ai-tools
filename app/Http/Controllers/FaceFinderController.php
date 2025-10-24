@@ -6,6 +6,7 @@ use App\Models\Album;
 use App\Models\Photo;
 use App\Models\OtpVerificationAttempt;
 use App\Models\User;
+use App\Jobs\PrepareMatchedPhotosZip;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -549,4 +550,45 @@ class FaceFinderController extends Controller
             return response()->json(['verified' => false]);
         }
     }
+
+    public function downloadMatchedPhotosZip(string $uuid, Request $request)
+    {
+        $album = Album::query()->where('uuid', $uuid)->firstOrFail(['id','uuid']);
+
+        $data = $request->validate([
+            'photo_ids' => 'required|array',
+            'photo_ids.*' => 'integer|exists:photos,id'
+        ]);
+
+        $sessionToken = $request->cookie('otp_session_token');
+
+        if (!$sessionToken) {
+            return response()->json(['error' => 'Session not verified'], 401);
+        }
+
+        // Verify session token
+        $existingAttempt = OtpVerificationAttempt::query()
+            ->where('album_id', $album->id)
+            ->where('session_token', $sessionToken)
+            ->first();
+
+        if (!$existingAttempt) {
+            return response()->json(['error' => 'Session not verified'], 401);
+        }
+
+        try {
+            // Dispatch job to prepare ZIP file
+            PrepareMatchedPhotosZip::dispatch($uuid, $data['photo_ids'], $sessionToken);
+
+            return response()->json([
+                'message' => 'ZIP file preparation started',
+                'status' => 'processing'
+            ]);
+
+        } catch (\Throwable $e) {
+            Log::error('Failed to dispatch ZIP preparation job', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed to start ZIP preparation'], 500);
+        }
+    }
+
 }
