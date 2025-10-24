@@ -68,7 +68,7 @@
                 <div class="mt-2 text-[13px] text-slate-600 inline-flex items-center gap-2 mb-6">
                     <span
                         class="h-5 w-5 rounded-full bg-emerald-100 text-emerald-700 inline-flex items-center justify-center font-semibold">i</span>
-                    <span>Images will show only when the match is 50% or higher.</span>
+                    <span>Images will show only when the match is 40% or higher.</span>
                 </div>
             </div>
             <div x-cloak class="mb-8 relative rounded-2xl h-[40vh] md:h-[50vh]">
@@ -99,6 +99,21 @@
                     </div>
                     <div x-show="matchedPhotos.length > 0" x-cloak
                         class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                        <!-- Scan Again Button -->
+                        <div class="mb-4 flex justify-center">
+                            <button @click="openCamera()"
+                                class="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium shadow hover:from-blue-700 hover:to-indigo-700 inline-flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                Scan Face Again
+                            </button>
+                        </div>
+
                         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                             <template x-for="photo in matchedPhotos" :key="photo.id">
                                 <div
@@ -114,7 +129,7 @@
                                         <div class="absolute left-2 bottom-2 px-2 py-0.5 rounded-md text-[11px] font-medium bg-white/90 text-slate-800 shadow"
                                             x-text="`${Math.round(((photo.similarity || 0) * 100))}% Matched`"></div>
                                         <!-- Hover download icon top-right -->
-                                        <a :href="photo.src" download
+                                        <a :href="photo.src" target="_blank"
                                             class="absolute top-2 right-2 hidden group-hover:flex items-center justify-center h-8 w-8 rounded-md bg-white/90 text-slate-700 shadow hover:bg-white"
                                             title="Download">
                                             <!-- Download (arrow down into tray) icon -->
@@ -346,7 +361,14 @@
                             const data = await response.json();
                             if (data.verified) {
                                 this.showUnlockStep = true;
+
+                                // Set matched photos from backend
+                                if (data.matched_photos && data.matched_photos.length > 0) {
+                                    this.matchedPhotos = data.matched_photos;
+                                }
                             }
+
+                            return data.verified;
                         }
                     } catch (e) {
                         console.warn('Failed to check OTP verification');
@@ -529,19 +551,10 @@
                             this.setSuccess(
                                 `Found ${this.matchedPhotos.length} matching photo${this.matchedPhotos.length !== 1 ? 's' : ''}.`
                             );
-
-
-                            // Update matched photos count if user is verified
-                            await this.updateMatchedPhotosCount(this.matchedPhotos.length);
                         } else {
                             this.matchedPhotos = [];
                             this.showNoMatches = true;
-                            this.setInfo(
-                                'No matching photos found for this image. Try another angle or better lighting.');
-
-
-                            // Update matched photos count to 0 if user is verified
-                            await this.updateMatchedPhotosCount(0);
+                            this.setInfo('No matching photos found for this image. Try another angle or better lighting.');
                         }
 
                     } catch (error) {
@@ -558,35 +571,6 @@
                     }
                 },
 
-                async updateMatchedPhotosCount(matchedCount) {
-                    // Only update if user is verified
-                    const verificationKey = `album_verified_${this.uuid}`;
-                    const verificationData = localStorage.getItem(verificationKey);
-
-                    if (!verificationData) {
-                        return; // User not verified, don't update count
-                    }
-
-                    try {
-                        const url = '{{ route('face_finder.public.update_matched_photos', ['uuid' => $uuid]) }}';
-                        const payload = {
-                            phone_number: this.phoneNumber || null,
-                            matched_count: matchedCount,
-                        };
-
-                        await fetch(url, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                            },
-                            body: JSON.stringify(payload)
-                        });
-                    } catch (e) {
-                        console.warn('Failed to update matched photos count');
-                    }
-                },
 
                 // Message helpers
                 clearMessages() {

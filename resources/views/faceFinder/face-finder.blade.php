@@ -113,12 +113,12 @@
                                 </div>
                             </div>
                         </template>
+                        <template x-if="albums.length === 0">
+                            <div
+                                class="w-full flex items-center justify-center text-center text-slate-500 text-sm py-10">
+                                No albums yet. Upload a ZIP and click Proceed to add one.</div>
+                        </template>
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <template x-if="albums.length === 0">
-                                <div
-                                    class="w-full flex items-center justify-center text-center text-slate-500 text-sm py-10">
-                                    No albums yet. Upload a ZIP and click Proceed to add one.</div>
-                            </template>
                             <template x-for="album in albums" :key="album.id">
                                 <div
                                     class="rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-md transition-shadow">

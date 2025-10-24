@@ -223,31 +223,9 @@ class FaceFinderController extends Controller
                 'public_url' => $album->public_url,
             ],
             'photos' => $photos->map(function($p){
-                // Generate the image url
-                // $contentDisposition = 'inline';
-                // $ext = strtolower(pathinfo($p->filename, PATHINFO_EXTENSION));
-                // $mimeMap = [
-                //     'jpg' => 'image/jpeg',
-                //     'jpeg' => 'image/jpeg',
-                //     'png' => 'image/png',
-                //     'webp' => 'image/webp'
-                // ];
-                // $mime = $mimeMap[$ext];
-
-                // $headers = [
-                //     'Content-Type' => $mime,
-                //     'Content-Disposition' => $contentDisposition.'; filename="'.$p->filename.'"'
-                // ];
-                // $photoLink = Storage::disk('s3')->response($p->path, $p->filename, $headers, $contentDisposition);
-
-                $photoLink = Storage::disk('s3')->temporaryUrl(
-                    $p->path,
-                    now()->addMinutes(15)
-                );
-
                 return [
                     'id' => $p->id,
-                    'src' => $photoLink,
+                    'src' => Storage::disk('s3')->temporaryUrl($p->path, now()->addDay()),
                     'size' => $p->size_bytes,
                 ];
             }),
@@ -347,12 +325,9 @@ class FaceFinderController extends Controller
             if ($existingAttempt) {
                 $existingAttempt->increment('attempts');
 
-                if(! isset($existingAttempt->session_token) || empty($existingAttempt->session_token)){
-                    $existingAttempt->session_token = $sessionToken;
-                    $existingAttempt->save();
-                }else{
-                    $sessionToken = $existingAttempt->session_token;
-                }
+                $existingAttempt->session_token = $sessionToken;
+                $existingAttempt->save();
+
             } else {
                 // Create new attempt
                 OtpVerificationAttempt::create([
@@ -379,37 +354,6 @@ class FaceFinderController extends Controller
                 );
         } catch (\Throwable $e) {
             Log::error('Failed to log OTP attempt', ['error' => $e->getMessage()]);
-            return response()->json(['ok' => false], 500);
-        }
-    }
-
-    public function updateMatchedPhotosCount(string $uuid, Request $request)
-    {
-        $album = Album::query()->where('uuid', $uuid)->firstOrFail(['id','uuid']);
-
-        $data = $request->validate([
-            'phone_number' => 'nullable|string|max:32',
-            'matched_count' => 'required|integer|min:0',
-        ]);
-
-        try {
-            $phoneNumber = $data['phone_number'] ?? null;
-            $matchedCount = $data['matched_count'];
-
-            // Find the existing attempt for this phone number and album
-            $existingAttempt = OtpVerificationAttempt::query()
-                ->where('album_id', $album->id)
-                ->where('phone_number', $phoneNumber)
-                ->first();
-
-            if ($existingAttempt) {
-                // Update the matched_found_photos count
-                $existingAttempt->update(['matched_found_photos' => $matchedCount]);
-            }
-
-            return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            Log::error('Failed to update matched photos count', ['error' => $e->getMessage()]);
             return response()->json(['ok' => false], 500);
         }
     }
@@ -493,16 +437,16 @@ class FaceFinderController extends Controller
                             $matchedPhotos->push([
                                 'id' => $matchPhoto->id,
                                 'filename' => $matchPhoto->filename,
-                                'src' => Storage::disk('s3')->temporaryUrl(
-                                    $matchPhoto->path,
-                                    now()->addMinutes(15)
-                                ), // asset('storage/' . $matchPhoto->path),
+                                'src' => Storage::disk('s3')->temporaryUrl($matchPhoto->path, now()->addDay()),
                                 'similarity' => isset($result['similarity']) ? (float) $result['similarity'] : 0.0,
                             ]);
                         }
                     }
                 }
             }
+
+            // Save matched photo count and IDs if user is verified
+            $this->saveMatchedPhotosData($album, $matchedPhotos);
 
             return response()->json([
                 'success' => true,
@@ -522,6 +466,41 @@ class FaceFinderController extends Controller
         }
     }
 
+    private function saveMatchedPhotosData($album, $matchedPhotos)
+    {
+        try {
+            $sessionToken = request()->cookie('otp_session_token');
+
+            if (!$sessionToken) {
+                return; // No session token, skip saving
+            }
+
+            // Find the existing attempt for this session and album
+            $existingAttempt = OtpVerificationAttempt::query()
+                ->where('album_id', $album->id)
+                ->where('session_token', $sessionToken)
+                ->first();
+
+            if ($existingAttempt) {
+                // Create array with photo IDs and their matching percentages
+                $matchedPhotosData = $matchedPhotos->map(function($photo) {
+                    return [
+                        'id' => $photo['id'],
+                        'percentage' => isset($photo['similarity']) ? round($photo['similarity'] * 100, 2) : 0
+                    ];
+                })->toArray();
+
+                // Update the matched_found_photos count and photo data with percentages
+                $existingAttempt->update([
+                    'matched_found_photos' => $matchedPhotos->count(),
+                    'matched_photo_id_json' => json_encode($matchedPhotosData),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Failed to save matched photos data', ['error' => $e->getMessage()]);
+        }
+    }
+
     public function checkOtpSession(string $uuid, Request $request)
     {
         $album = Album::query()->where('uuid', $uuid)->firstOrFail(['id','uuid']);
@@ -538,7 +517,34 @@ class FaceFinderController extends Controller
             ->first();
 
         if ($existingAttempt) {
-            return response()->json(['verified' => true]);
+            $matchedPhotosData = $existingAttempt->matched_photo_id_json ? json_decode($existingAttempt->matched_photo_id_json, true) : [];
+
+            // Get full photo details for matched photos
+            $matchedPhotos = [];
+            if (!empty($matchedPhotosData)) {
+                $photoIds = array_column($matchedPhotosData, 'id');
+                $percentageLookup = array_column($matchedPhotosData, 'percentage', 'id');
+
+                if (!empty($photoIds)) {
+                    $photos = Photo::query()
+                        ->whereIn('id', $photoIds)
+                        ->get(['id', 'filename', 'path']);
+
+                    $matchedPhotos = $photos->map(function($photo) use ($percentageLookup) {
+                        return [
+                            'id' => $photo->id,
+                            'filename' => $photo->filename,
+                            'src' => Storage::disk('s3')->temporaryUrl($photo->path, now()->addDay()),
+                            'similarity' => ($percentageLookup[$photo->id] ?? 0) / 100,
+                        ];
+                    })->toArray();
+                }
+            }
+
+            return response()->json([
+                'verified' => true,
+                'matched_photos' => $matchedPhotos
+            ]);
         } else {
             return response()->json(['verified' => false]);
         }

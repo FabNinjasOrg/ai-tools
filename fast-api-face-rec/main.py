@@ -89,8 +89,8 @@ async def compare_face(
                     best_similarity = similarity
                     best_distance = distance
 
-            # Threshold: similarity >= 0.5 (≈80% match)
-            if best_similarity is not None and best_similarity >= 0.5:
+            # Threshold: similarity >= 0.4 (≈70% match)
+            if best_similarity is not None and best_similarity >= 0.4:
                 results.append({
                     "index": idx,
                     "distance": best_distance,

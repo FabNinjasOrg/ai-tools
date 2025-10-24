@@ -38,7 +38,6 @@ Route::prefix('face-finder/public')->group(function () {
     Route::get('{name}/{uuid}', [FaceFinderController::class, 'publicAlbumPage'])->name('face_finder.public.show');
     Route::post('find-photos', [FaceFinderController::class, 'findPhotos'])->name('face_finder.public.find_photos');
     Route::post('{uuid}/otp-attempt', [FaceFinderController::class, 'logOtpAttempt'])->name('face_finder.public.otp_attempt');
-    Route::post('{uuid}/update-matched-photos', [FaceFinderController::class, 'updateMatchedPhotosCount'])->name('face_finder.public.update_matched_photos');
     Route::post('{uuid}/otp-verified', [FaceFinderController::class, 'checkOtpSession'])->name('face_finder.public.otp_verified');
 });
 

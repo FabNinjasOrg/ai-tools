@@ -113,7 +113,7 @@
                                 <div class="flex items-center gap-2">
                                     <div>
                                         <div class="text-xs text-red-700 font-medium">Number of attempts with no matches found</div>
-                                        <div class="text-lg font-bold text-red-800 tabular-nums">{{ $attemptUniquePhones }}
+                                        <div class="text-lg font-bold text-red-800 tabular-nums">{{ $noMatchCount }}
                                         </div>
                                     </div>
                                 </div>
