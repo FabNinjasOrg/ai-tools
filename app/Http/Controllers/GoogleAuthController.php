@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
 use App\Models\User;
+use App\Models\UserSubscription;
 
 class GoogleAuthController extends Controller
 {
@@ -37,6 +38,14 @@ class GoogleAuthController extends Controller
                         'email' => $email,
                         'password' => bcrypt(str()->random(8)),
                         'google_id' => $googleId,
+                    ]);
+
+                    // Assign trial subscription to the new user
+                    $trialSubscription = UserSubscription::create([
+                        'user_id' => $user->id,
+                        'type' => 'trial',
+                        'start_date' => now(),
+                        'status' => 'active',
                     ]);
                 }
             }

@@ -10,6 +10,65 @@
                 to find there photos easily !</p>
         </div>
 
+        @if($isUserOnTrial)
+            <div class="mb-8 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 shadow-lg p-6 relative">
+                <button class="absolute top-6 right-6 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold text-sm hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg">
+                    Upgrade Now
+                </button>
+                <div class="flex items-start gap-4">
+                    <div class="flex-shrink-0">
+                        <div class="h-12 w-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                            <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-3">
+                            <h3 class="text-lg font-bold text-orange-900">You're on Trial</h3>
+                            <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">TRIAL</span>
+                        </div>
+                        <p class="text-amber-800 text-sm mb-4">Experience our Face Finder with some limitations. Upgrade to unlock full features!</p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div class="flex items-start gap-2 text-sm text-amber-800">
+                                <div class="flex-shrink-0 mt-1">
+                                    <svg class="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <span class="font-semibold">Single Album</span>
+                                    <p class="text-xs text-amber-700 mt-0.5">Only one album creation</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2 text-sm text-amber-800">
+                                <div class="flex-shrink-0 mt-1">
+                                    <svg class="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <span class="font-semibold">10 Images Allowed</span>
+                                    <p class="text-xs text-amber-700 mt-0.5">Maximum photos per album</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2 text-sm text-amber-800">
+                                <div class="flex-shrink-0 mt-1">
+                                    <svg class="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <span class="font-semibold">No Zip File Download</span>
+                                    <p class="text-xs text-amber-700 mt-0.5">Not allowed to download matched photos zip file</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <div x-data="faceFinderApp()" x-init="loadAlbums()" x-cloak class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div>
                 <div class="bg-white rounded-2xl border border-slate-200">
@@ -26,8 +85,7 @@
                     <div class="p-5 space-y-4">
                         <input x-ref="zipInput" type="file" accept=".zip" @change="handleZipSelected($event)"
                             class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white" />
-                        <div class="text-[12px] text-slate-500">Max 1 GB. ZIP must contain photos only, and only these
-                            types: png, jpg, jpeg, webp.</div>
+                        <div class="text-[12px] text-slate-500">Max 1 GB. Upload a ZIP file containing photos (png, jpg, jpeg, webp).</div>
 
                         <template x-if="fileErrorMessage">
                             <div class="text-[12px] text-red-600" x-text="fileErrorMessage"></div>
@@ -167,7 +225,6 @@
 @endsection
 
 @section('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script>
         function faceFinderApp() {
             return {
@@ -181,59 +238,30 @@
                 albums: [],
                 successMessage: '',
 
-                async handleZipSelected(event) {
+                handleZipSelected(event) {
                     const file = (event.target.files && event.target.files[0]) ? event.target.files[0] : null;
                     this.clearMessages();
                     this.canProceed = false;
                     this.selectedZip = null;
+
                     if (!file) return;
+
+                    // Basic validation only - server will handle the rest
                     if (!/\.zip$/i.test(file.name)) {
                         this.fileErrorMessage = 'Only .zip files are allowed.';
                         if (this.$refs.zipInput) this.$refs.zipInput.value = '';
                         return;
                     }
+
                     if (file.size > this.maxBytes) {
                         this.fileErrorMessage = 'ZIP too large. Maximum allowed size is 1 GB.';
                         if (this.$refs.zipInput) this.$refs.zipInput.value = '';
                         return;
                     }
-                    try {
-                        const arrayBuffer = await file.arrayBuffer();
-                        const zip = await JSZip.loadAsync(arrayBuffer);
-                        let imageCount = 0;
-                        let hasInvalid = false;
-                        console.log(zip);
-                        zip.forEach((_, entry) => {
-                            if (entry.dir) return;
-                            const nameLower = (entry.name || '').toLowerCase();
-                            // Ignore macOS metadata
-                            if (nameLower.startsWith('__macosx/') || nameLower.includes('/._') || nameLower
-                                .startsWith('._') || nameLower.endsWith('.ds_store')) {
-                                return;
-                            }
-                            const isAllowed = /\.(png|jpe?g|webp)$/i.test(nameLower);
-                            if (!isAllowed) {
-                                hasInvalid = true;
-                            } else {
-                                imageCount++;
-                            }
-                        });
-                        if (hasInvalid) {
-                            this.errorMessage = 'ZIP must contain only photos of types: png, jpg, jpeg.';
-                            if (this.$refs.zipInput) this.$refs.zipInput.value = '';
-                            return;
-                        }
-                        if (imageCount === 0) {
-                            this.errorMessage = 'ZIP contains no photos.';
-                            if (this.$refs.zipInput) this.$refs.zipInput.value = '';
-                            return;
-                        }
-                        this.selectedZip = file;
-                        this.canProceed = true;
-                    } catch (e) {
-                        this.errorMessage = 'Invalid or corrupted ZIP. Please try another file.';
-                        if (this.$refs.zipInput) this.$refs.zipInput.value = '';
-                    }
+
+                    // File passed basic checks, allow proceed
+                    this.selectedZip = file;
+                    this.canProceed = true;
                 },
                 clearSelectedZip() {
                     this.selectedZip = null;

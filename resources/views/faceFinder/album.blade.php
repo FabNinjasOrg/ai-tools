@@ -175,7 +175,7 @@
                 uuid,
                 albumName: '',
                 photos: [],
-                page: 1,
+                page: 0, // Start at 0, will be updated by pagination response
                 perPage: 24,
                 hasMore: true,
                 loading: false,
@@ -209,8 +209,12 @@
                         this.albumName = payload?.album?.name || this.albumName;
                         if (payload?.album?.public_url) this.publicUrl = payload.album.public_url;
                         if (Array.isArray(payload.photos)) this.photos.push(...payload.photos);
-                        this.hasMore = Boolean(payload.has_more);
-                        this.page += 1;
+
+                        // Handle new pagination structure
+                        if (payload.pagination) {
+                            this.hasMore = Boolean(payload.pagination.has_more_pages);
+                            this.page = payload.pagination.current_page;
+                        }
                     } catch (error) {
                         console.error(error);
                         this.setError('Failed to load photos. Please try again.');
@@ -260,7 +264,7 @@
                     const base = `{{ route('face_finder.albums.photos', ['uuid' => 'UUID_PLACEHOLDER']) }}`.replace(
                         'UUID_PLACEHOLDER', this.uuid);
                     const params = new URLSearchParams({
-                        page: String(this.page),
+                        page: String(this.page + 1), // Next page for load more
                         per_page: String(this.perPage)
                     });
                     return `${base}?${params.toString()}`;

@@ -27,7 +27,7 @@
     <body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 text-slate-900 min-h-screen flex flex-col">
 
         <!-- Navigation -->
-        <nav class="relative z-40 px-6 py-4">
+        <nav class="relative px-6 py-4">
             <div class="max-w-7xl mx-auto flex items-center justify-between">
                 <div class="flex items-center space-x-2">
                     <a href="{{ route('face_finder') }}" class="flex items-center gap-2">

@@ -1,8 +1,8 @@
-<nav class="relative z-40 px-6 py-4">
+<nav class="relative px-6 py-4">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
         <div class="flex items-center space-x-2">
             @php($isPublicFaceFinder = request()->is('face-finder/public*'))
-            <a href="{{ $isPublicFaceFinder ? route('face_finder') : (Auth::check() ? route('face_finder.upload_album') : route('face_finder')) }}" class="flex items-center gap-2">
+            <a href="{{ $isPublicFaceFinder ? route('face_finder') : (Auth::check() ? route('face_finder') : route('face_finder')) }}" class="flex items-center gap-2">
                 <div class="h-8 w-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 text-white inline-flex items-center justify-center font-bold text-sm">FF</div>
                 <span class="text-xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">Face Finder</span>
             </a>

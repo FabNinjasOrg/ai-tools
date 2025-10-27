@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UserSubscription;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,6 +40,14 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+        ]);
+
+        // Assign trial subscription to the new user
+        $trialSubscription = UserSubscription::create([
+            'user_id' => $user->id,
+            'type' => 'trial',
+            'start_date' => now(),
+            'status' => 'active',
         ]);
 
         event(new Registered($user));

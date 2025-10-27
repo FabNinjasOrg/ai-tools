@@ -97,6 +97,7 @@
                                 x-text="`${matchedPhotos.length} matched ${matchedPhotos.length === 1 ? 'photo' : 'photos'}`"></span>
                         </div>
 
+                        @if(!$isOwnerOnTrial)
                         <!-- Download Zip Button -->
                         <button @click="downloadMatchedPhotosZip()"
                             class="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium shadow hover:from-purple-700 hover:to-indigo-700 inline-flex items-center gap-2">
@@ -105,6 +106,7 @@
                             </svg>
                             Download ZIP
                         </button>
+                        @endif
                     </div>
                     <div x-show="matchedPhotos.length > 0" x-cloak
                         class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4">
@@ -235,16 +237,18 @@
                     <div x-show="!showOTPInput" class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2">Phone Number</label>
-                            <input x-model="phoneNumber" type="tel" placeholder="+1234567890"
+                            <input x-model="phoneNumber" @input="validatePhoneNumber" type="tel" placeholder="+1234567890"
                                 class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                                 :disabled="isSendingOTP">
                             <p class="text-xs text-slate-500 mt-1">Enter your phone number with country code</p>
+                            <div x-show="otpErrorMessage" x-cloak class="text-red-500 text-xs mt-1" x-text="otpErrorMessage"></div>
+                            <div x-show="otpSuccessMessage" x-cloak class="text-green-500 text-xs mt-1" x-text="otpSuccessMessage"></div>
                         </div>
 
                         <div class="flex gap-3">
                             <button @click="closePhoneModal()"
                                 class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">Cancel</button>
-                            <button @click="sendOTP()" :disabled="!phoneNumber || isSendingOTP"
+                            <button @click="sendOTP()" :disabled="!phoneNumber || isSendingOTP || otpErrorMessage !== ''"
                                 class="flex-1 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2">
                                 <svg x-show="isSendingOTP" class="h-4 w-4 animate-spin" viewBox="0 0 24 24"
                                     fill="none" stroke="currentColor" stroke-width="2">
@@ -265,6 +269,8 @@
                                 :disabled="isVerifyingOTP">
                             <p class="text-xs text-slate-500 mt-1">Enter the 6-digit code sent to <span
                                     x-text="phoneNumber"></span></p>
+                            <div x-show="otpErrorMessage" x-cloak class="text-red-500 text-xs mt-1" x-text="otpErrorMessage"></div>
+                            <div x-show="otpSuccessMessage" x-cloak class="text-green-500 text-xs mt-1" x-text="otpSuccessMessage"></div>
                         </div>
 
                         <div class="flex gap-3">
@@ -324,6 +330,8 @@
 @endsection
 
 @section('scripts')
+    <!-- libphonenumber CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/libphonenumber-js@1.10.58/bundle/libphonenumber-min.js"></script>
     <script>
         function albumPage(uuid) {
             return {
@@ -336,6 +344,8 @@
                 otpCode: '',
                 isVerifyingOTP: false,
                 isSendingOTP: false,
+                otpErrorMessage: '',
+                otpSuccessMessage: '',
                 stream: null,
                 matchedPhotos: [],
                 showNoMatches: false,
@@ -414,26 +424,33 @@
                     this.showPhoneModal = false;
                     this.showOTPInput = false;
                     this.otpCode = '';
+                    this.clearOtpMessages();
                 },
 
                 async sendOTP() {
-                    if (!this.phoneNumber || this.phoneNumber.trim().length < 8) {
-                        this.setError('Please enter a valid phone number.');
+                    // Clear previous messages
+                    this.clearOtpMessages();
+
+                    // Check phone validation
+                    if (!this.phoneNumber || this.otpErrorMessage) {
+                        this.otpErrorMessage = this.otpErrorMessage || 'Please enter a valid phone number.';
                         return;
                     }
-                    this.clearMessages();
+
                     this.isSendingOTP = true;
                     try {
                         // Optionally call backend to send OTP here
                         // For now, simulate a short delay and success
                         await new Promise(r => setTimeout(r, 600));
-                        this.setSuccess('OTP sent successfully. Please check your phone.');
+                        this.otpSuccessMessage = 'OTP sent successfully. Please check your phone.';
+                        this.otpErrorMessage = '';
 
                         // Move to OTP input step
                         this.showOTPInput = true;
                     } catch (e) {
                         console.error('Failed to send OTP', e);
-                        this.setError('Failed to send OTP. Please try again.');
+                        this.otpErrorMessage = 'Failed to send OTP. Please try again.';
+                        this.otpSuccessMessage = '';
                     } finally {
                         this.isSendingOTP = false;
                     }
@@ -441,12 +458,13 @@
 
                 async verifyOTP() {
                     if (!this.otpCode || this.otpCode.length !== 6) {
-                        this.setError('Please enter a valid 6-digit OTP');
+                        this.otpErrorMessage = 'Please enter a valid 6-digit OTP';
+                        this.otpSuccessMessage = '';
                         return;
                     }
 
                     this.isVerifyingOTP = true;
-                    this.clearMessages();
+                    this.clearOtpMessages();
 
                     try {
                         // Static OTP check
@@ -454,7 +472,8 @@
                             throw new Error('invalid_static_otp');
                         }
 
-                        this.setSuccess('OTP verified successfully!');
+                        this.otpSuccessMessage = 'OTP verified successfully!';
+                        this.otpErrorMessage = '';
 
                         this.logOtpAttempt(this.phoneNumber);
 
@@ -464,7 +483,8 @@
 
                     } catch (error) {
                         console.error('Error verifying OTP:', error);
-                        this.setError('Invalid OTP. Please check and try again.');
+                        this.otpErrorMessage = 'Invalid OTP. Please check and try again.';
+                        this.otpSuccessMessage = '';
                     } finally {
                         this.isVerifyingOTP = false;
                     }
@@ -473,6 +493,22 @@
                 backToPhoneInput() {
                     this.showOTPInput = false;
                     this.otpCode = '';
+                    this.clearOtpMessages();
+                },
+
+                validatePhoneNumber() {
+                    this.otpErrorMessage = '';
+
+                    if (this.phoneNumber && this.phoneNumber.length > 0) {
+                        try {
+                            const phoneNumber = libphonenumber.parsePhoneNumber(this.phoneNumber);
+                            if (!phoneNumber || !phoneNumber.isValid()) {
+                                this.otpErrorMessage = 'Invalid phone number';
+                            }
+                        } catch (error) {
+                            this.otpErrorMessage = 'Invalid phone number';
+                        }
+                    }
                 },
 
                 async openCamera() {
@@ -625,6 +661,10 @@
                     this.successMessage = '';
                     this.errorMessage = '';
                     this.infoMessage = '';
+                },
+                clearOtpMessages() {
+                    this.otpErrorMessage = '';
+                    this.otpSuccessMessage = '';
                 },
                 setSuccess(msg) {
                     this.successMessage = msg;

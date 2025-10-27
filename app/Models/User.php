@@ -52,4 +52,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(Album::class);
     }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(UserSubscription::class);
+    }
+
 }

@@ -8,6 +8,7 @@ use App\Models\OtpVerificationAttempt;
 use App\Models\User;
 use App\Jobs\PrepareMatchedPhotosZip;
 use Illuminate\Http\Request;
+use Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -23,7 +24,9 @@ class FaceFinderController extends Controller
 
     public function uploadAlbumPage()
     {
-        return view('faceFinder.face-finder');
+        $isUserOnTrial = isUserOnTrial();
+
+        return view('faceFinder.face-finder', compact('isUserOnTrial'));
     }
 
     public function show(string $uuid)
@@ -84,8 +87,22 @@ class FaceFinderController extends Controller
         $originalName = $zipFile->getClientOriginalName();
         $baseName = $request->input('name') ?: preg_replace('/\.zip$/i', '', $originalName);
 
-        $uuid = (string) Str::uuid();
         $userId = auth()->id();
+
+        // Check if user is on trial and enforce limits
+        $isUserOnTrial = isUserOnTrial();
+
+        if ($isUserOnTrial) {
+            // Check single album limit
+            $existingAlbum = Album::where('user_id', $userId)->first();
+            if ($existingAlbum) {
+                return response()->json([
+                    'message' => 'Trial users can create only one album. Please delete your existing album or upgrade your subscription.'
+                ], 422);
+            }
+        }
+
+        $uuid = (string) Str::uuid();
 
         $s3Folder = "FaceFinder/Albums/{$uuid}";
 
@@ -107,11 +124,54 @@ class FaceFinderController extends Controller
             return response()->json(['message' => 'Failed to open ZIP.'], 422);
         }
 
-        $numExtractedPhotos = 0;
         $allowedExtensions = ['png', 'jpg', 'jpeg', 'webp'];
+
+        // First pass: Count photos to validate limits BEFORE uploading
+        $numPhotos = 0;
+        for ($entryIndex = 0; $entryIndex < $zip->numFiles; $entryIndex++) {
+            $zipEntryStat = $zip->statIndex($entryIndex);
+            $zipEntryName = $zipEntryStat['name'] ?? '';
+
+            // Skip directories and unwanted files
+            if (str_ends_with($zipEntryName, '/')) continue;
+
+            $zipEntryNameLower = strtolower($zipEntryName);
+            if (
+                str_starts_with($zipEntryNameLower, '__macosx/') ||
+                str_contains($zipEntryNameLower, '/._') ||
+                str_ends_with($zipEntryNameLower, '.ds_store')
+            ) continue;
+
+            $fileExtension = pathinfo($zipEntryNameLower, PATHINFO_EXTENSION);
+            if (!in_array($fileExtension, $allowedExtensions, true)) continue;
+
+            $numPhotos++;
+        }
+
+        // Validate ZIP contains photos
+        if ($numPhotos === 0) {
+            $zip->close();
+            @unlink($localTempZipPath);
+            @rmdir($localTempDir);
+            return response()->json([
+                'message' => 'ZIP file contains no valid photos. Please ensure your ZIP contains PNG, JPG, JPEG, or WEBP images only.'
+            ], 422);
+        }
+
+        // Check trial user photo limit BEFORE uploading
+        if ($isUserOnTrial && $numPhotos > 10) {
+            $zip->close();
+            @unlink($localTempZipPath);
+            @rmdir($localTempDir);
+            return response()->json([
+                'message' => 'Trial users can upload up to 10 images only. Upgrade your subscription for more.'
+            ], 422);
+        }
+
+        // Second pass: Upload and process photos
+        $numExtractedPhotos = 0;
         $toInsert = [];
 
-        // Extract each valid photo and upload to S3
         for ($entryIndex = 0; $entryIndex < $zip->numFiles; $entryIndex++) {
             $zipEntryStat = $zip->statIndex($entryIndex);
             $zipEntryName = $zipEntryStat['name'] ?? '';
@@ -204,18 +264,12 @@ class FaceFinderController extends Controller
     {
         $album = Album::query()->where('uuid', $uuid)->firstOrFail(['id','uuid','name','public_url']);
 
-        $page = max(1, (int) $request->query('page', 1));
-        $perPage = min(60, $request->query('per_page', 24));
-        $offset = ($page - 1) * $perPage;
+        $perPage = $request->query('per_page', 24);
 
         $photos = Photo::query()
             ->where('album_id', $album->id)
             ->orderBy('id')
-            ->offset($offset)
-            ->limit($perPage)
-            ->get(['id','filename','path','size_bytes']);
-
-        $hasMore = Photo::query()->where('album_id', $album->id)->count() > ($offset + $photos->count());
+            ->paginate($perPage, ['id','filename','path','size_bytes']);
 
         return response()->json([
             'album' => [
@@ -230,9 +284,13 @@ class FaceFinderController extends Controller
                     'size' => $p->size_bytes,
                 ];
             }),
-            'page' => $page,
-            'per_page' => $perPage,
-            'has_more' => $hasMore,
+            'pagination' => [
+                'current_page' => $photos->currentPage(),
+                'last_page' => $photos->lastPage(),
+                'per_page' => $photos->perPage(),
+                'total' => $photos->total(),
+                'has_more_pages' => $photos->hasMorePages(),
+            ],
         ]);
     }
 
@@ -300,9 +358,26 @@ class FaceFinderController extends Controller
 
     public function publicAlbumPage(string $name, string $uuid)
     {
-        $albumName = Album::query()->where('uuid', $uuid)->value('name') ?? '';
+        $album = Album::query()->where('uuid', $uuid)->first(['name', 'user_id']);
+        $albumName = $album->name ?? '';
 
-        return view('faceFinder.public-album', ['uuid' => $uuid, 'albumName' => $albumName]);
+        // Check if album owner is on trial
+        $isOwnerOnTrial = false;
+        if ($album && $album->user_id) {
+            $owner = User::find($album->user_id);
+            if ($owner) {
+                $isOwnerOnTrial = $owner->subscriptions()
+                    ->where('type', 'trial')
+                    ->where('status', 'active')
+                    ->exists();
+            }
+        }
+
+        return view('faceFinder.public-album', [
+            'uuid' => $uuid,
+            'albumName' => $albumName,
+            'isOwnerOnTrial' => $isOwnerOnTrial
+        ]);
     }
 
     public function logOtpAttempt(string $uuid, Request $request)
