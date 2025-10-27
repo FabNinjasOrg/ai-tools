@@ -469,6 +469,9 @@ class FaceFinderController extends Controller
             })->filter()->values()->toArray();
 
             if (empty($embeddings)) {
+                // Update state with no matches
+                $this->saveMatchedPhotosData($album, collect());
+
                 return response()->json([
                     'success' => false,
                     'message' => 'No valid face embeddings found in album photos',
@@ -494,6 +497,9 @@ class FaceFinderController extends Controller
             $comparisonResult = $response->json();
 
             if (!$comparisonResult['match']) {
+                // Update state with no matches
+                $this->saveMatchedPhotosData($album, collect());
+
                 return response()->json([
                     'success' => true,
                     'message' => 'No matching faces found',
@@ -512,8 +518,8 @@ class FaceFinderController extends Controller
                         if ($matchPhoto) {
                             $matchedPhotos->push([
                                 'id' => $matchPhoto->id,
-                                'filename' => $matchPhoto->filename,
-                                'src' => Storage::disk('s3')->temporaryUrl($matchPhoto->path, now()->addDay()),
+                                // 'filename' => $matchPhoto->filename,
+                                // 'src' => Storage::disk('s3')->temporaryUrl($matchPhoto->path, now()->addDay()),
                                 'similarity' => isset($result['similarity']) ? (float) $result['similarity'] : 0.0,
                             ]);
                         }
@@ -593,37 +599,84 @@ class FaceFinderController extends Controller
             ->first();
 
         if ($existingAttempt) {
-            $matchedPhotosData = $existingAttempt->matched_photo_id_json ? json_decode($existingAttempt->matched_photo_id_json, true) : [];
-
-            // Get full photo details for matched photos
-            $matchedPhotos = [];
-            if (!empty($matchedPhotosData)) {
-                $photoIds = array_column($matchedPhotosData, 'id');
-                $percentageLookup = array_column($matchedPhotosData, 'percentage', 'id');
-
-                if (!empty($photoIds)) {
-                    $photos = Photo::query()
-                        ->whereIn('id', $photoIds)
-                        ->get(['id', 'filename', 'path']);
-
-                    $matchedPhotos = $photos->map(function($photo) use ($percentageLookup) {
-                        return [
-                            'id' => $photo->id,
-                            'filename' => $photo->filename,
-                            'src' => Storage::disk('s3')->temporaryUrl($photo->path, now()->addDay()),
-                            'similarity' => ($percentageLookup[$photo->id] ?? 0) / 100,
-                        ];
-                    })->toArray();
-                }
-            }
-
             return response()->json([
-                'verified' => true,
-                'matched_photos' => $matchedPhotos
+                'verified' => true
             ]);
         } else {
             return response()->json(['verified' => false]);
         }
+    }
+
+    public function loadMatchedPhotos(string $uuid, Request $request)
+    {
+        $album = Album::query()->where('uuid', $uuid)->firstOrFail(['id','uuid']);
+
+        $sessionToken = $request->cookie('otp_session_token');
+
+        if (!$sessionToken) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Session not verified',
+                'matched_photos' => [],
+                'has_more' => false
+            ], 401);
+        }
+
+        $existingAttempt = OtpVerificationAttempt::query()
+            ->where('album_id', $album->id)
+            ->where('session_token', $sessionToken)
+            ->first();
+
+        if (!$existingAttempt) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Session not found',
+                'matched_photos' => [],
+                'has_more' => false
+            ], 404);
+        }
+
+        $matchedPhotosData = $existingAttempt->matched_photo_id_json ? json_decode($existingAttempt->matched_photo_id_json, true) : [];
+
+        // Pagination parameters
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = 24;
+        $offset = ($page - 1) * $perPage;
+
+        // Extract photo IDs and create percentage lookup
+        $allPhotoIds = array_column($matchedPhotosData, 'id');
+        $percentageLookup = array_column($matchedPhotosData, 'percentage', 'id');
+        $totalPhotos = count($allPhotoIds);
+
+        // Paginate photo IDs first (slice before database query)
+        $paginatedPhotoIds = array_slice($allPhotoIds, $offset, $perPage);
+
+        // Fetch only the photos for current page
+        $matchedPhotos = [];
+        if (!empty($paginatedPhotoIds)) {
+            $photos = Photo::query()
+                ->whereIn('id', $paginatedPhotoIds)
+                ->get(['id', 'filename', 'path']);
+
+            // Generate S3 URLs only for current page photos
+            $matchedPhotos = $photos->map(function($photo) use ($percentageLookup) {
+                return [
+                    'id' => $photo->id,
+                    'filename' => $photo->filename,
+                    'src' => Storage::disk('s3')->temporaryUrl($photo->path, now()->addDay()),
+                    'similarity' => ($percentageLookup[$photo->id] ?? 0) / 100,
+                ];
+            })->toArray();
+        }
+
+        // Check if there are more photos
+        $hasMore = ($offset + $perPage) < $totalPhotos;
+
+        return response()->json([
+            'success' => true,
+            'matched_photos' => $matchedPhotos,
+            'has_more' => $hasMore
+        ]);
     }
 
     public function downloadMatchedPhotosZip(string $uuid, Request $request)

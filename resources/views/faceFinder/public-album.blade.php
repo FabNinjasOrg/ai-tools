@@ -157,6 +157,33 @@
                                 </div>
                             </template>
                         </div>
+
+                        <!-- Load More Button -->
+                        <div x-show="matchedPhotosHasMore" x-cloak class="flex justify-center mt-6">
+                            <button @click="loadMoreMatchedPhotos()"
+                                class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                :disabled="matchedPhotosLoading">
+                                <span x-show="!matchedPhotosLoading">Load more</span>
+                                <span x-show="matchedPhotosLoading" class="inline-flex items-center gap-2">
+                                    <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Loading…
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Loading state while checking verification -->
+                    <div x-show="isCheckingVerification" x-cloak class="w-full text-center">
+                        <div class="inline-flex items-center gap-3 text-slate-600">
+                            <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span class="text-sm">Checking session...</span>
+                        </div>
                     </div>
 
                     <!-- No matches message in the same area -->
@@ -355,6 +382,10 @@
                 infoMessage: '',
                 isCheckingVerification: true,
                 hasCheckedOtp: false,
+                // Pagination state
+                matchedPhotosPage: 1,
+                matchedPhotosHasMore: false,
+                matchedPhotosLoading: false,
 
                 init() {
                     if (!this.hasCheckedOtp) {
@@ -381,16 +412,77 @@
                             if (data.verified) {
                                 this.showUnlockStep = true;
 
-                                // Set matched photos from backend
-                                if (data.matched_photos && data.matched_photos.length > 0) {
-                                    this.matchedPhotos = data.matched_photos;
-                                }
+                                // Set matched photos from backend - await it to prevent flicker
+                                await this.loadMatchedPhotos();
                             }
 
                             return data.verified;
                         }
                     } catch (e) {
                         console.warn('Failed to check OTP verification');
+                    }
+                },
+
+                async loadMatchedPhotos(reset = true) {
+                    if (reset) {
+                        this.matchedPhotos = [];
+                        this.matchedPhotosPage = 1;
+                    }
+
+                    try {
+                        const url = `{{ route('face_finder.public.matched_photos', ['uuid' => $uuid]) }}?page=${this.matchedPhotosPage}`;
+                        const response = await fetch(url, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            credentials: 'include'
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.success && data.matched_photos) {
+                                this.matchedPhotos = data.matched_photos;
+                                this.matchedPhotosHasMore = data.has_more || false;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Failed to load matched photos');
+                    }
+                },
+
+                async loadMoreMatchedPhotos() {
+                    if (this.matchedPhotosLoading || !this.matchedPhotosHasMore) return;
+
+                    this.matchedPhotosLoading = true;
+                    this.matchedPhotosPage++;
+
+                    try {
+                        const url = `{{ route('face_finder.public.matched_photos', ['uuid' => $uuid]) }}?page=${this.matchedPhotosPage}`;
+                        const response = await fetch(url, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            credentials: 'include'
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.success && data.matched_photos) {
+                                // Append new photos to existing array
+                                this.matchedPhotos = [...this.matchedPhotos, ...data.matched_photos];
+                                this.matchedPhotosHasMore = data.has_more || false;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Failed to load more matched photos');
+                    } finally {
+                        this.matchedPhotosLoading = false;
                     }
                 },
 
@@ -565,6 +657,8 @@
                 async processCapturedPhoto(blob) {
                     this.isProcessing = true;
                     this.matchedPhotos = [];
+                    this.matchedPhotosPage = 1;
+                    this.matchedPhotosHasMore = false;
                     this.showNoMatches = false;
                     this.clearMessages();
                     this.setInfo('Processing your photo…');
@@ -591,11 +685,8 @@
                         const result = await response.json();
 
                         if (result.success && result.matched_photos && result.matched_photos.length > 0) {
-                            this.matchedPhotos = result.matched_photos;
                             this.showNoMatches = false;
-                            this.setSuccess(
-                                `Found ${this.matchedPhotos.length} matching photo${this.matchedPhotos.length !== 1 ? 's' : ''}.`
-                            );
+                            await this.loadMatchedPhotos();
                         } else {
                             this.matchedPhotos = [];
                             this.showNoMatches = true;

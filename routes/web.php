@@ -35,11 +35,12 @@ Route::prefix('face-finder')->group(function () {
 });
 
 Route::prefix('face-finder/public')->group(function () {
-    Route::get('{name}/{uuid}', [FaceFinderController::class, 'publicAlbumPage'])->name('face_finder.public.show');
     Route::post('find-photos', [FaceFinderController::class, 'findPhotos'])->name('face_finder.public.find_photos');
+    Route::get('{uuid}/matched-photos', [FaceFinderController::class, 'loadMatchedPhotos'])->name('face_finder.public.matched_photos');
     Route::post('{uuid}/otp-attempt', [FaceFinderController::class, 'logOtpAttempt'])->name('face_finder.public.otp_attempt');
     Route::post('{uuid}/otp-verified', [FaceFinderController::class, 'checkOtpSession'])->name('face_finder.public.otp_verified');
     Route::post('{uuid}/download-matched-photos-zip', [FaceFinderController::class, 'downloadMatchedPhotosZip'])->name('face_finder.public.download_matched_photos_zip');
+    Route::get('{name}/{uuid}', [FaceFinderController::class, 'publicAlbumPage'])->name('face_finder.public.show');
 });
 
 // Authentication routes (added by Laravel Breeze) with face-finder URL prefix
