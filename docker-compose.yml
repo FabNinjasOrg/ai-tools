@@ -35,10 +35,24 @@ services:
     environment:
       MYSQL_DATABASE: laravel
       MYSQL_ROOT_PASSWORD: laravel
+    command: --max_connections=500
     volumes:
       - db_data:/var/lib/mysql
     networks:
       - laravel-net
+
+  cron:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      container_name: laravel_ai_app_cron
+      volumes:
+        - ./:/var/www
+      command: ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf", "-n"]
+      depends_on:
+        - mysql-test
+      networks:
+        - laravel-net
 
 models:
   llama3.2:

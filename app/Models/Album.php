@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Album extends Model
 {
     protected $fillable = [
-        'user_id', 'uuid', 'name', 'zip_filename', 'zip_path', 'zip_size_bytes', 'photos_count', 'public_url',
+        'user_id', 'uuid', 'name', 'zip_filename', 'zip_path', 'zip_size_bytes', 'photos_count', 'public_url', 'upload_status',
     ];
 
     public function photos(): HasMany

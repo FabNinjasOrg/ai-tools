@@ -161,8 +161,12 @@
                             </div>
                         </template>
                         <template x-if="errorMessage">
-                            <div class="mb-3 rounded-xl border border-red-200 border-l-4 border-l-red-400 bg-red-50 px-4 py-3 text-sm shadow-sm"
+                            <div class="mb-3 rounded-xl border border-red-200 border-l-4 border-l-red-400 bg-red-50 px-4 py-3 text-sm shadow-sm relative"
                                 style="border-color: #f87171;">
+                                <button type="button" @click="errorMessage = ''" aria-label="Dismiss error"
+                                    class="absolute top-2 right-2 text-red-500 hover:text-red-700">
+                                    ×
+                                </button>
                                 <div class="flex items-start gap-3 text-red-700">
                                     <div
                                         class="shrink-0 h-5 w-5 rounded-full bg-red-100 text-red-700 inline-flex items-center justify-center">
@@ -310,12 +314,12 @@
                         }
                         const data = await res.json();
                         if (data && data.album) {
-                            // After upload, refetch to ensure latest ordering and counts
-                            await this.loadAlbums();
-                            this.successMessage = 'Album uploaded successfully';
-                            setTimeout(() => {
-                                this.successMessage = '';
-                            }, 3000);
+                            // await this.loadAlbums();
+                            this.successMessage = `Album "${data.album.name || ''}" is uploading. Please wait...`;
+                            if (data.album.uuid) {
+                                localStorage.setItem('ff_uploading_album', JSON.stringify({ uuid: data.album.uuid, name: data.album.name || '' }));
+                                this.pollUploadStatus(data.album.uuid);
+                            }
                         }
                         this.resetForm();
                     } catch (e) {
@@ -334,9 +338,45 @@
                         if (!res.ok) throw new Error('Failed to load albums');
                         const data = await res.json();
                         this.albums = Array.isArray(data.albums) ? data.albums : [];
+                        // Restore persistent uploading banner if present
+                        try {
+                            const pending = JSON.parse(localStorage.getItem('ff_uploading_album') || 'null');
+                            if (pending && pending.uuid) {
+                                this.successMessage = `Album "${pending.name || ''}" is uploading. Please wait...`;
+                                this.pollUploadStatus(pending.uuid);
+                            }
+                        } catch (e) {}
                     } catch (e) {
                         console.error(e);
                     }
+                },
+                async getUploadStatus(uuid) {
+                    const url = "{{ route('zipfileUploadStatus', ['uuid' => 'UUID_PLACEHOLDER']) }}".replace('UUID_PLACEHOLDER', uuid);
+                    try {
+                        const res = await fetch(url, {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+                        if (!res.ok) return null;
+                        const data = await res.json();
+                        return data && data.upload_status ? data.upload_status : null;
+                    } catch (e) {
+                        return null;
+                    }
+                },
+                async pollUploadStatus(uuid) {
+                    const status = await this.getUploadStatus(uuid);
+
+                    if (status === 'completed') {
+                        localStorage.removeItem('ff_uploading_album');
+
+                        await this.loadAlbums();
+
+                        this.successMessage = 'Album processing completed.';
+
+                        setTimeout(() => { this.successMessage = ''; }, 5000);
+                        return;
+                    }
+                    setTimeout(() => this.pollUploadStatus(uuid), 5000);
                 }
             }
         }

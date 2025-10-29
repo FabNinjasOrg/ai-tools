@@ -29,6 +29,7 @@ Route::prefix('face-finder')->group(function () {
         Route::post('albums', [FaceFinderController::class, 'storeZip'])->name('face_finder.albums.store');
         Route::get('albums/{uuid}', [FaceFinderController::class, 'show'])->name('face_finder.albums.show');
         Route::get('albums/{uuid}/photos', [FaceFinderController::class, 'photos'])->name('face_finder.albums.photos');
+        Route::get('albums/{uuid}/upload-status', [FaceFinderController::class, 'zipfileUploadStatus'])->name('zipfileUploadStatus');
         Route::post('albums/{uuid}/generate-public', [FaceFinderController::class, 'generatePublic'])->name('face_finder.albums.generate_public');
         Route::delete('albums/{uuid}', [FaceFinderController::class, 'deleteAlbum'])->name('face_finder.albums.delete');
     });

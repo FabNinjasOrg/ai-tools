@@ -7,8 +7,11 @@ use App\Models\Photo;
 use App\Models\OtpVerificationAttempt;
 use App\Models\User;
 use App\Jobs\PrepareMatchedPhotosZip;
+use App\Jobs\ProcessAlbumPhotoJob;
 use Illuminate\Http\Request;
 use Auth;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Bus\Batch;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -59,6 +62,7 @@ class FaceFinderController extends Controller
     {
         $albums = Album::query()
             ->where('user_id', auth()->id())
+            ->where('upload_status', 'completed')
             ->withCount('photos')
             ->orderByDesc('created_at')
             ->get(['id', 'uuid', 'name', 'zip_size_bytes']);
@@ -76,6 +80,17 @@ class FaceFinderController extends Controller
         ]);
     }
 
+    public function zipfileUploadStatus(string $uuid)
+    {
+        $album = Album::query()->where('uuid', $uuid)->first();
+
+        if (!$album) {
+            return response()->json(['message' => 'Album not found'], 404);
+        }
+
+        return response()->json(['upload_status' => $album->upload_status]);
+    }
+
     public function storeZip(Request $request)
     {
         $request->validate([
@@ -88,6 +103,17 @@ class FaceFinderController extends Controller
         $baseName = $request->input('name') ?: preg_replace('/\.zip$/i', '', $originalName);
 
         $userId = auth()->id();
+
+        // Prevent a new upload if one is already in progress for this user
+        $hasInProgress = Album::query()
+            ->where('user_id', $userId)
+            ->where('upload_status', 'inprogress')
+            ->exists();
+        if ($hasInProgress) {
+            return response()->json([
+                'message' => 'An album upload is already in progress. Please wait until it completes and upload again.'
+            ], 422);
+        }
 
         // Check if user is on trial and enforce limits
         $isUserOnTrial = isUserOnTrial();
@@ -103,12 +129,6 @@ class FaceFinderController extends Controller
         }
 
         $uuid = (string) Str::uuid();
-
-        $s3Folder = "FaceFinder/Albums/{$uuid}";
-
-        // Store ZIP privately on S3
-        // Storage::disk('s3')->putFileAs($s3Folder, $zipFile, $originalName, 'public');
-        // $zipPath = "{$s3Folder}/{$originalName}";
 
         // Extract ZIP temporarily locally
         $localTempDir = storage_path("app/tmp_zip_extract/{$uuid}");
@@ -126,8 +146,9 @@ class FaceFinderController extends Controller
 
         $allowedExtensions = ['png', 'jpg', 'jpeg', 'webp'];
 
-        // First pass: Count photos to validate limits BEFORE uploading
-        $numPhotos = 0;
+        // collect photos from the zip file
+        $photos = [];
+
         for ($entryIndex = 0; $entryIndex < $zip->numFiles; $entryIndex++) {
             $zipEntryStat = $zip->statIndex($entryIndex);
             $zipEntryName = $zipEntryStat['name'] ?? '';
@@ -145,88 +166,26 @@ class FaceFinderController extends Controller
             $fileExtension = pathinfo($zipEntryNameLower, PATHINFO_EXTENSION);
             if (!in_array($fileExtension, $allowedExtensions, true)) continue;
 
-            $numPhotos++;
+            $photos[] = $zipEntryName;
         }
 
+        $zip->close();
+
         // Validate ZIP contains photos
-        if ($numPhotos === 0) {
-            $zip->close();
-            @unlink($localTempZipPath);
-            @rmdir($localTempDir);
+        if (empty($photos)) {
             return response()->json([
                 'message' => 'ZIP file contains no valid photos. Please ensure your ZIP contains PNG, JPG, JPEG, or WEBP images only.'
             ], 422);
         }
 
         // Check trial user photo limit BEFORE uploading
-        if ($isUserOnTrial && $numPhotos > 10) {
-            $zip->close();
-            @unlink($localTempZipPath);
-            @rmdir($localTempDir);
+        if ($isUserOnTrial && count($photos) > 10) {
             return response()->json([
                 'message' => 'Trial users can upload up to 10 images only. Upgrade your subscription for more.'
             ], 422);
         }
 
-        // Second pass: Upload and process photos
-        $numExtractedPhotos = 0;
-        $toInsert = [];
-
-        for ($entryIndex = 0; $entryIndex < $zip->numFiles; $entryIndex++) {
-            $zipEntryStat = $zip->statIndex($entryIndex);
-            $zipEntryName = $zipEntryStat['name'] ?? '';
-
-            // Skip directories and unwanted files
-            if (str_ends_with($zipEntryName, '/')) continue;
-
-            $zipEntryNameLower = strtolower($zipEntryName);
-            if (
-                str_starts_with($zipEntryNameLower, '__macosx/') ||
-                str_contains($zipEntryNameLower, '/._') ||
-                str_ends_with($zipEntryNameLower, '.ds_store')
-            ) continue;
-
-            $fileExtension = pathinfo($zipEntryNameLower, PATHINFO_EXTENSION);
-            if (!in_array($fileExtension, $allowedExtensions, true)) continue;
-
-            $fileContents = $zip->getFromIndex($entryIndex);
-            if ($fileContents === false) continue;
-
-            $filename = basename($zipEntryName);
-            $photoS3Path = "{$s3Folder}/{$filename}";
-
-            // Upload to S3 under FaceFinder/Albums/{uuid}/{filename}
-            Storage::disk('s3')->put($photoS3Path, $fileContents, 'private');
-
-            // Save temporarily locally for embedding
-            $localTempPhoto = $localTempDir . DIRECTORY_SEPARATOR . $filename;
-            file_put_contents($localTempPhoto, $fileContents);
-
-            // Call FastAPI for embedding
-            $imageEmbeddingJson = $this->EmbeddingTheImage($localTempPhoto);
-
-            // Add to bulk insert
-            $toInsert[] = [
-                'album_id' => null, // Will update after creating album
-                'filename' => $filename,
-                'path' => $photoS3Path,
-                'size_bytes' => strlen($fileContents),
-                'embedding_json' => $imageEmbeddingJson ?? null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-
-            $numExtractedPhotos++;
-
-            // Clean up local temp photo
-            @unlink($localTempPhoto);
-        }
-
-        $zip->close();
-        @unlink($localTempZipPath);
-        @rmdir($localTempDir);
-
-        // Create album record
+        // Create album record with inprogress status
         $album = Album::create([
             'user_id' => $userId,
             'uuid' => $uuid,
@@ -234,20 +193,50 @@ class FaceFinderController extends Controller
             'zip_filename' => $originalName,
             'zip_path' => ' ',
             'zip_size_bytes' => $zipFile->getSize() ?: 0,
-            'photos_count' => $numExtractedPhotos,
+            'photos_count' => count($photos),
+            'upload_status' => 'inprogress',
         ]);
 
-        // Update album_id in photo data and insert
-        foreach ($toInsert as &$photoData) {
-            $photoData['album_id'] = $album->id;
-        }
-        if (!empty($toInsert)) {
-            Photo::insert($toInsert);
+        // Dispatch job to process photos
+        $batchName = "album_{$userId}_{$uuid}";
+        $batchJobs = [];
+
+        // Split into chunks, 100 photos per job
+        foreach (array_chunk($photos, 100) as $chunk) {
+            $batchJobs[] = new ProcessAlbumPhotoJob($album->id, $uuid, $chunk, $localTempZipPath);
         }
 
-        // Update album photo count
-        $album->photos_count = $numExtractedPhotos;
-        $album->save();
+        $albumId = $album->id;
+        $batch = Bus::batch($batchJobs)
+            ->name($batchName)
+            ->onQueue('high')
+            ->then(function (Batch $batch) use ($albumId) {
+                try {
+                    $album = Album::find($albumId);
+                    if ($album) {
+                        $album->upload_status = 'completed';
+                        $album->save();
+                    }
+                } catch (\Throwable $e) {
+                    Log::error('Failed to mark album completed', ['album_id' => $albumId, 'error' => $e->getMessage()]);
+                }
+            })
+            ->catch(function (Batch $batch, \Throwable $e) use ($albumId) {
+                try {
+                    $album = Album::find($albumId);
+                    if ($album) {
+                        $album->upload_status = 'fail';
+                        $album->save();
+                    }
+                } catch (\Throwable $ex) {
+                    Log::error('Failed to mark album failed', ['album_id' => $albumId, 'error' => $ex->getMessage()]);
+                }
+            })
+            ->finally(function () use ($localTempZipPath, $localTempDir) {
+                @unlink($localTempZipPath);
+                @rmdir($localTempDir);
+            })
+            ->dispatch();
 
         return response()->json([
             'album' => [
@@ -257,6 +246,7 @@ class FaceFinderController extends Controller
                 'size' => $album->zip_size_bytes,
                 'count' => $album->photos_count,
             ],
+            'batch_id' => $batch->id,
         ]);
     }
 

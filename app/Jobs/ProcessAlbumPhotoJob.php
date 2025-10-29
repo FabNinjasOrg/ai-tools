@@ -1,0 +1,118 @@
+<?php
+
+namespace App\Jobs;
+
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
+use ZipArchive;
+use Illuminate\Support\Facades\Log;
+use App\Models\Photo;
+use Illuminate\Bus\Batchable;
+
+class ProcessAlbumPhotoJob implements ShouldQueue
+{
+    use Queueable, Batchable;
+
+    public int $albumId;
+    public string $uuid;
+    public array $photoEntries;
+    public string $zipPath;
+
+    public $tries = 3;
+    public $timeout = 600;
+
+    /**
+     * Create a new job instance.
+     */
+    public function __construct($albumId, $uuid, array $photoEntries, string $zipPath)
+    {
+        $this->albumId = $albumId;
+        $this->uuid = $uuid;
+        $this->photoEntries = $photoEntries;
+        $this->zipPath = $zipPath;
+    }
+
+    /**
+     * Execute the job.
+     */
+    public function handle(): void
+    {
+        $s3Folder = "FaceFinder/Albums/{$this->uuid}";
+        $zip = new ZipArchive();
+
+        if ($zip->open($this->zipPath) !== true) {
+            Log::error("Failed to open ZIP for album {$this->albumId}");
+            return;
+        }
+
+        $toInsert = [];
+
+        foreach ($this->photoEntries as $photoName) {
+            try {
+                $content = $zip->getFromName($photoName);
+                if ($content === false) {
+                    Log::warning("Skipping unreadable photo: {$photoName}");
+                    continue;
+                }
+
+                $filename = basename($photoName);
+                $photoS3Path = "{$s3Folder}/{$filename}";
+
+                Storage::disk('s3')->put($photoS3Path, $content, 'private');
+
+                // Create temp file for embedding the photo
+                $tempPath = storage_path("app/tmp_embedding/{$this->uuid}/{$filename}");
+                if (!is_dir(dirname($tempPath))) mkdir(dirname($tempPath), 0775, true);
+                file_put_contents($tempPath, $content);
+
+                $embeddingJson = $this->EmbeddingTheImage($tempPath);
+
+                $toInsert[] = [
+                    'album_id' => $this->albumId,
+                    'filename' => $filename,
+                    'path' => $photoS3Path,
+                    'size_bytes' => strlen($content),
+                    'embedding_json' => $embeddingJson ?? null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+
+                @unlink($tempPath);
+            } catch (\Throwable $e) {
+                Log::error("Failed processing photo: {$photoName}", [
+                    'album' => $this->albumId,
+                    'error' => $e->getMessage()
+                ]);
+                // Continue gracefully don’t fail the job
+                continue;
+            }
+        }
+
+        if (!empty($toInsert)) {
+            Photo::insert($toInsert);
+        }
+
+        $zip->close();
+    }
+
+    private function EmbeddingTheImage(string $path) {
+        $response = Http::attach('file', file_get_contents($path), basename($path))
+            ->timeout(60)
+            ->post('http://host.docker.internal:8005/image-embedding/');
+
+        if ($response->failed()) {
+            logger("Embedding API failed for ". basename($path), ['response' => $response->body()]);
+            return;
+        }
+
+        // API returns faces: array of embeddings (or empty array)
+        $faces = $response->json('faces');
+
+        // Convert to JSON for DB storage (store per-photo faces)
+        $embeddingJson = json_encode($faces);
+
+        return $embeddingJson;
+    }
+}

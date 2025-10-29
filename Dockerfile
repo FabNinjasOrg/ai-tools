@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     cron \
+    supervisor \
+    busybox \
     wget \
     gnupg \
     libmagickwand-dev \
@@ -47,8 +49,14 @@ COPY . .
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache \
     && chmod -R 775 /var/www/storage /var/www/bootstrap/cache
 
+# Copy supervisor config
+COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Setup cron job
+RUN echo "* * * * * cd /var/www && busybox sh -c '/usr/local/bin/php artisan schedule:run >> /var/www/storage/logs/cron.log 2>&1'" | crontab -
+
 # Expose PHP-FPM port (matches Nginx fastcgi_pass)
 EXPOSE 9000
 
-# Start PHP-FPM
-CMD ["php-fpm"]
+# Start supervisor
+CMD ["/usr/bin/supervisord", "-n"]
