@@ -3,6 +3,7 @@
 use App\Http\Controllers\ModelController;
 use App\Http\Controllers\FaceFinderController;
 use App\Http\Controllers\GoogleAuthController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -32,6 +33,10 @@ Route::prefix('face-finder')->group(function () {
         Route::get('albums/{uuid}/upload-status', [FaceFinderController::class, 'zipfileUploadStatus'])->name('zipfileUploadStatus');
         Route::post('albums/{uuid}/generate-public', [FaceFinderController::class, 'generatePublic'])->name('face_finder.albums.generate_public');
         Route::delete('albums/{uuid}', [FaceFinderController::class, 'deleteAlbum'])->name('face_finder.albums.delete');
+
+        Route::get('profile', [ProfileController::class, 'edit'])->name('face_finder.profile.edit');
+        Route::patch('profile', [ProfileController::class, 'update'])->name('face_finder.profile.update');
+        Route::delete('profile', [ProfileController::class, 'destroy'])->name('face_finder.profile.destroy');
     });
 });
 
