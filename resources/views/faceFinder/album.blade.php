@@ -1,56 +1,16 @@
-@extends('faceFinder.app')
+@extends('faceFinder.layout.sidebar-layout')
+
+@section('page-title', 'Album Details')
 
 @section('content')
-    <div x-data="albumPage('{{ $uuid }}')" x-init="init()" x-cloak class="max-w-7xl mx-auto px-6 py-12">
-        <!-- Global page messages (top of page) -->
-        <div class="mb-4">
-            <template x-if="successMessage">
-                <div class="w-full">
-                    <div
-                        class="rounded-xl border border-green-200 border-l-4 border-l-green-500 bg-green-50 px-4 py-3 text-sm shadow-sm text-green-800">
-                        <div class="flex items-start gap-3">
-                            <div
-                                class="shrink-0 h-5 w-5 rounded-full bg-green-100 text-green-700 inline-flex items-center justify-center">
-                                ✓</div>
-                            <div class="flex-1" x-text="successMessage"></div>
-                            <button @click="successMessage=''" class="text-green-700/70 hover:text-green-800">✕</button>
-                        </div>
-                    </div>
-                </div>
-            </template>
-            <template x-if="errorMessage">
-                <div class="w-full">
-                    <div
-                        class="rounded-xl border border-red-200 border-l-4 border-l-red-500 bg-red-50 px-4 py-3 text-sm shadow-sm text-red-800">
-                        <div class="flex items-start gap-3">
-                            <div
-                                class="shrink-0 h-5 w-5 rounded-full bg-red-100 text-red-700 inline-flex items-center justify-center">
-                                !</div>
-                            <div class="flex-1" x-text="errorMessage"></div>
-                            <button @click="errorMessage=''" class="text-red-700/70 hover:text-red-800">✕</button>
-                        </div>
-                    </div>
-                </div>
-            </template>
-            <template x-if="infoMessage">
-                <div class="w-full">
-                    <div
-                        class="rounded-xl border border-slate-200 border-l-4 border-l-slate-400 bg-slate-50 px-4 py-3 text-sm shadow-sm text-slate-800">
-                        <div class="flex items-start gap-3">
-                            <div
-                                class="shrink-0 h-5 w-5 rounded-full bg-slate-100 text-slate-700 inline-flex items-center justify-center">
-                                i</div>
-                            <div class="flex-1" x-text="infoMessage"></div>
-                            <button @click="infoMessage=''" class="text-slate-600/70 hover:text-slate-800">✕</button>
-                        </div>
-                    </div>
-                </div>
-            </template>
-        </div>
+    <div x-data="albumPage('{{ $uuid }}')" x-init="init()" x-cloak class="max-w-7xl mx-auto px-6">
         <div class="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-            <div class="flex items-center gap-3">
-                <h1 class="text-3xl md:text-5xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent"
-                    x-text="albumName"></h1>
+            <div class="flex items-center gap-3 text-xl md:text-xl">
+                <a href="{{ route('face_finder.albums.index') }}" class="text-slate-600 hover:text-green-600 transition-colors">
+                    Album
+                </a>
+                >
+                <h1 x-text="albumName"></h1>
             </div>
             <div class="flex items-center gap-2">
                 <form action="{{ route('face_finder.albums.delete', ['uuid' => $uuid]) }}" method="POST"
@@ -64,75 +24,107 @@
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
-                        Delete album
                     </button>
                 </form>
-                <a href="{{ route('face_finder.upload_album') }}"
-                    class="h-10 px-4 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 inline-flex items-center">Back</a>
             </div>
         </div>
 
-        <div x-cloak x-show="publicUrl || !loading" class="mb-8 rounded-2xl border border-slate-200 bg-white px-4 py-4">
-            <div class="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3 sm:gap-4">
-                <div class="w-full sm:w-auto">
-                    <div class="text-sm font-medium text-slate-900">Public share link</div>
-                    <div class="text-[13px] text-slate-600 mt-1">Click Generate to create a public link for this album that
-                        you can share.</div>
-
-                    <!-- Admin OTP stats inside the same card -->
-                    <div class="mt-4 pt-3 border-t border-slate-200">
-                        <div class="flex items-center gap-2 mb-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500" fill="none"
-                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                            <span class="text-sm font-medium text-slate-700">Public URL Analytics</span>
+        <!-- Public Share Link Section -->
+        <div class="mb-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="p-5 border-b border-slate-200">
+                <div class="flex items-center gap-3">
+                    <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white inline-flex items-center justify-center">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">Public Share Link</h2>
+                        <p class="text-xs text-slate-500">Share this link to allow users to find their photos</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-5">
+                <template x-if="loadingUrl">
+                    <div class="flex items-center gap-3 text-slate-600">
+                        <div class="h-5 w-5 rounded-full border-2 border-slate-200 border-t-emerald-600 animate-spin"></div>
+                        <span class="text-sm">Generating public URL...</span>
+                    </div>
+                </template>
+                <template x-if="!loadingUrl && publicUrl">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <div class="flex-1 w-full">
+                            <input type="text" :value="publicUrl" readonly
+                                class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 font-mono">
                         </div>
-                        <div class="grid grid-cols-3 gap-3">
-                            <div
-                                class="bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg p-3 border border-emerald-200">
-                                <div class="flex items-center gap-2">
-                                    <div>
-                                        <div class="text-xs text-emerald-700 font-medium">Number Of Successful OTP Verifications</div>
-                                        <div class="text-lg font-bold text-emerald-800 tabular-nums">{{ $attemptTotal }}
-                                        </div>
-                                    </div>
-                                </div>
+                        <button @click="copyPublic()"
+                            class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-all inline-flex items-center gap-2 shadow-sm hover:shadow-md whitespace-nowrap">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            Copy Link
+                        </button>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div class="mb-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="p-5 border-b border-slate-200">
+                <div class="flex items-center gap-3">
+                    <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white inline-flex items-center justify-center">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">Public URL Analytics</h2>
+                        <p class="text-xs text-slate-500">Track how users interact with your shared album</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-5">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-4 border border-emerald-200">
+                        <div class="flex items-start gap-3">
+                            <div class="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                                <svg class="h-5 w-5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
                             </div>
-                            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200">
-                                <div class="flex items-center gap-2">
-                                    <div>
-                                        <div class="text-xs text-blue-700 font-medium">Number Of Unique Users visited</div>
-                                        <div class="text-lg font-bold text-blue-800 tabular-nums">{{ $attemptUniquePhones }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="bg-gradient-to-r from-red-50 to-red-50 rounded-lg p-3 border border-red-200">
-                                <div class="flex items-center gap-2">
-                                    <div>
-                                        <div class="text-xs text-red-700 font-medium">Number of attempts with no matches found</div>
-                                        <div class="text-lg font-bold text-red-800 tabular-nums">{{ $noMatchCount }}
-                                        </div>
-                                    </div>
-                                </div>
+                            <div>
+                                <div class="text-xs text-emerald-700 font-medium mb-1">Successful Verifications</div>
+                                <div class="text-2xl font-bold text-emerald-800 tabular-nums">{{ $attemptTotal }}</div>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="flex items-center gap-2 sm:gap-3 shrink-0 w-full sm:w-auto sm:justify-end">
-                    <template x-if="publicUrl">
-                        <div x-cloak
-                            class="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 w-full sm:w-auto">
-                            <input type="text" :value="publicUrl" readonly
-                                class="bg-transparent text-sm text-slate-700 w-full sm:w-56 border-none">
-                            <button @click="copyPublic()"
-                                class="text-emerald-700 text-sm hover:underline cursor-pointer whitespace-nowrap">Copy</button>
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                        <div class="flex items-start gap-3">
+                            <div class="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                                <svg class="h-5 w-5 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <div class="text-xs text-blue-700 font-medium mb-1">Unique Visitors</div>
+                                <div class="text-2xl font-bold text-blue-800 tabular-nums">{{ $attemptUniquePhones }}</div>
+                            </div>
                         </div>
-                    </template>
-                    <button x-cloak x-show="!publicUrl" @click="generatePublic()"
-                        class="h-9 px-4 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 w-full sm:w-auto">Generate</button>
+                    </div>
+                    <div class="bg-gradient-to-r from-red-50 to-orange-50 rounded-xl p-4 border border-red-200">
+                        <div class="flex items-start gap-3">
+                            <div class="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+                                <svg class="h-5 w-5 text-red-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </div>
+                            <div>
+                                <div class="text-xs text-red-700 font-medium mb-1">No Matches Found</div>
+                                <div class="text-2xl font-bold text-red-800 tabular-nums">{{ $noMatchCount }}</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -180,23 +172,21 @@
                 hasMore: true,
                 loading: false,
                 publicUrl: '',
-                // global messages
-                successMessage: '',
-                errorMessage: '',
-                infoMessage: '',
-                timers: {},
+                loadingUrl: false,
 
                 // lifecycle
                 async init() {
                     await this.loadMore();
+                    // Auto-generate public URL if it doesn't exist
+                    if (!this.publicUrl) {
+                        await this.generatePublic();
+                    }
                 },
 
                 // actions
                 async loadMore() {
                     if (this.loading || !this.hasMore) return;
                     this.loading = true;
-                    // clear any previous messages when starting a new action
-                    this.clearMessages();
                     try {
                         const response = await fetch(this.getPhotosApiUrl(), {
                             headers: {
@@ -217,15 +207,14 @@
                         }
                     } catch (error) {
                         console.error(error);
-                        this.setError('Failed to load photos. Please try again.');
+                        this.$store.messages.showError('Failed to load photos. Please try again.');
                     } finally {
                         this.loading = false;
                     }
                 },
 
                 async generatePublic() {
-                    // clear previous messages
-                    this.clearMessages();
+                    this.loadingUrl = true;
                     try {
                         const endpoint =
                             `{{ route('face_finder.albums.generate_public', ['uuid' => 'UUID_PLACEHOLDER']) }}`.replace(
@@ -240,22 +229,20 @@
                         if (!res.ok) throw new Error('Failed to generate URL');
                         const data = await res.json();
                         this.publicUrl = data.public_url || '';
-                        if (this.publicUrl) this.setSuccess('Public URL generated successfully.');
-                        else this.setInfo('Public URL not available yet. Please try again later.');
                     } catch (error) {
                         console.error(error);
-                        this.setError('Could not generate public URL. Please try again.');
+                        this.$store.messages.showError('Could not generate public URL. Please try again.');
+                    } finally {
+                        this.loadingUrl = false;
                     }
                 },
 
                 async copyPublic() {
-                    // clear previous messages
-                    this.clearMessages();
                     try {
                         await navigator.clipboard.writeText(this.publicUrl);
-                        this.setSuccess('Copied public URL to clipboard.');
+                        this.$store.messages.showSuccess('Copied public URL to clipboard!');
                     } catch (_) {
-                        this.setError('Failed to copy. Please copy manually.');
+                        this.$store.messages.showError('Failed to copy. Please copy manually.');
                     }
                 },
 
@@ -268,31 +255,6 @@
                         per_page: String(this.perPage)
                     });
                     return `${base}?${params.toString()}`;
-                },
-                clearMessages() {
-                    this.successMessage = '';
-                    this.errorMessage = '';
-                    this.infoMessage = '';
-                    if (this.timers.successMessage) clearTimeout(this.timers.successMessage);
-                    if (this.timers.infoMessage) clearTimeout(this.timers.infoMessage);
-                },
-                setSuccess(message) {
-                    this.successMessage = message;
-                    this.autoClear('successMessage');
-                },
-                setInfo(message) {
-                    this.infoMessage = message;
-                    this.autoClear('infoMessage');
-                },
-                setError(message) {
-                    this.errorMessage = message;
-                    // do not auto clear errors
-                },
-                autoClear(key) {
-                    if (this.timers[key]) clearTimeout(this.timers[key]);
-                    this.timers[key] = setTimeout(() => {
-                        this[key] = '';
-                    }, 3000);
                 }
             };
         }

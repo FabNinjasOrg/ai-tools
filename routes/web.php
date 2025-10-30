@@ -23,6 +23,7 @@ Route::prefix('face-finder')->group(function () {
     Route::get('/auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback'])->name('google.callback');
 
     Route::get('/', [FaceFinderController::class, 'faceFinder'])->name('face_finder');
+    Route::get('/pricing', [FaceFinderController::class, 'pricing'])->name('face_finder.pricing');
 
     Route::middleware('auth')->group(function () {
         Route::get('upload-album', [FaceFinderController::class, 'uploadAlbumPage'])->name('face_finder.upload_album');

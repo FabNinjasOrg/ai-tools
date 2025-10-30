@@ -1,30 +1,10 @@
-@extends('faceFinder.app')
+@extends('faceFinder.layout.sidebar-layout')
+
+@section('page-title', 'Profile Settings')
+@section('page-subtitle', 'Manage your account settings and preferences')
 
 @section('content')
-    <div class="max-w-7xl mx-auto px-6 py-12">
-        <!-- Header with Back Button -->
-        <div class="mb-10 relative">
-            <div class="text-center">
-                <h2 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                    {{ __('Profile') }}
-                </h2>
-                <p class="text-slate-600 mt-4 max-w-2xl mx-auto">Manage your account settings and preferences.</p>
-            </div>
-
-            <!-- Back Button - Right Side -->
-            <div class="absolute top-0 right-0">
-                <a
-                    href="{{ route('face_finder.upload_album') }}"
-                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors"
-                    title="Go back"
-                >
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                    </svg>
-                    <span>Back</span>
-                </a>
-            </div>
-        </div>
+    <div class="max-w-7xl mx-auto px-6">
 
         <div class="space-y-6 max-w-6xl mx-auto">
             <!-- Profile and Password Side by Side -->

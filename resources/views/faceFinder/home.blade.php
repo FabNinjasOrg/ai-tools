@@ -12,13 +12,6 @@
                 Guests scan once. We show only their photos. Agencies upload a single album and share one link—no more
                 endless searching, zips, or guesswork.
             </p>
-            <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-                <a href="{{ route('login') }}"
-                    class="px-6 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700">Get
-                    started</a>
-                <a href="#how" class="px-6 py-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50">How it
-                    works</a>
-            </div>
         </section>
 
         <!-- Problem + Solution -->
@@ -127,14 +120,40 @@
             </div>
         </section>
 
-        <!-- CTAs -->
-        <section class="text-center">
-            <div class="inline-flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-                <span class="text-slate-800 text-sm">Ready to streamline event photo sharing?</span>
-                <a href="{{ route('login') }}"
-                    class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 text-sm">Upload
-                    an album</a>
+        <!-- About -->
+        <section id="about" class="mb-10">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[13px]">About</div>
+                <h2 class="mt-3 text-2xl md:text-3xl font-bold text-slate-900">Effortless event photo sharing</h2>
+                <p class="mt-2 text-slate-600 max-w-2xl mx-auto">Share a single public link. Guests securely scan and instantly see only their photos.</p>
             </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="rounded-2xl bg-white p-5 shadow-sm">
+                    <div class="h-10 w-10 rounded-xl bg-emerald-500 text-white inline-flex items-center justify-center">🔗</div>
+                    <div class="mt-3 font-semibold text-slate-900">Single public link</div>
+                    <p class="text-[13px] text-slate-600 mt-1">Upload once and share one link for the album.</p>
+                </div>
+                <div class="rounded-2xl bg-white p-5 shadow-sm">
+                    <div class="h-10 w-10 rounded-xl bg-teal-500 text-white inline-flex items-center justify-center">🧠</div>
+                    <div class="mt-3 font-semibold text-slate-900">Face‑aware viewing</div>
+                    <p class="text-[13px] text-slate-600 mt-1">Guests see only photos where they appear.</p>
+                </div>
+                <div class="rounded-2xl bg-white p-5 shadow-sm">
+                    <div class="h-10 w-10 rounded-xl bg-indigo-500 text-white inline-flex items-center justify-center">📦</div>
+                    <div class="mt-3 font-semibold text-slate-900">ZIP download</div>
+                    <p class="text-[13px] text-slate-600 mt-1">Download matched photos in one go.</p>
+                </div>
+                <div class="rounded-2xl bg-white p-5 shadow-sm">
+                    <div class="h-10 w-10 rounded-xl bg-sky-500 text-white inline-flex items-center justify-center">📸</div>
+                    <div class="mt-3 font-semibold text-slate-900">Unlimited albums</div>
+                    <p class="text-[13px] text-slate-600 mt-1">Create albums freely within your plan storage.</p>
+                </div>
+            </div>
+
+
         </section>
+
+
     </div>
 @endsection

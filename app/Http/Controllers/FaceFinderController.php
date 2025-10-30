@@ -22,7 +22,15 @@ class FaceFinderController extends Controller
 {
     public function faceFinder()
     {
+        if (Auth::check()) {
+            return redirect()->route('face_finder.upload_album');
+        }
         return view('faceFinder.home');
+    }
+
+    public function pricing()
+    {
+        return view('faceFinder.pricing');
     }
 
     public function uploadAlbumPage()
@@ -67,17 +75,23 @@ class FaceFinderController extends Controller
             ->orderByDesc('created_at')
             ->get(['id', 'uuid', 'name', 'zip_size_bytes']);
 
-        return response()->json([
-            'albums' => $albums->map(function ($a) {
-                return [
-                    'id' => $a->id,
-                    'uuid' => $a->uuid,
-                    'name' => $a->name,
-                    'size' => $a->zip_size_bytes,
-                    'count' => $a->photos_count,
-                ];
-            })
-        ]);
+        // If AJAX request, return JSON
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'albums' => $albums->map(function ($a) {
+                    return [
+                        'id' => $a->id,
+                        'uuid' => $a->uuid,
+                        'name' => $a->name,
+                        'size' => $a->zip_size_bytes,
+                        'count' => $a->photos_count,
+                    ];
+                })
+            ]);
+        }
+
+        // Otherwise, return the view
+        return view('faceFinder.albums-list');
     }
 
     public function zipfileUploadStatus(string $uuid)
