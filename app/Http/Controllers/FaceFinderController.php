@@ -328,9 +328,10 @@ class FaceFinderController extends Controller
     }
 
     public function EmbeddingTheImage(string $path) {
+        $baseUrl = env('FASTAPI_BASE_URL', 'http://fastapi:8005');
         $response = Http::attach('file', file_get_contents($path), basename($path))
             ->timeout(60)
-            ->post('http://host.docker.internal:8005/image-embedding/');
+            ->post($baseUrl.'/image-embedding/');
 
         if ($response->failed()) {
             logger("Embedding API failed for ". basename($path), ['response' => $response->body()]);
@@ -470,9 +471,10 @@ class FaceFinderController extends Controller
             }
 
             // Call FastAPI compare-face endpoint
+            $baseUrl = env('FASTAPI_BASE_URL', 'http://fastapi:8005');
             $response = Http::attach('file', file_get_contents($photo->getPathname()), $photo->getClientOriginalName())
                 ->timeout(60)
-                ->post('http://host.docker.internal:8005/compare-face/', [
+                ->post($baseUrl.'/compare-face/', [
                     'db_embeddings' => json_encode($embeddings)
                 ]);
 

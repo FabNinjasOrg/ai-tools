@@ -10,7 +10,7 @@ from PIL import Image
 app = FastAPI()
 
 # Initialize the model once on startup
-face_app = FaceAnalysis(name='buffalo_l', providers=['CoreMLExecutionProvider'])
+face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
 face_app.prepare(ctx_id=0)
 
 @app.post("/image-embedding/")

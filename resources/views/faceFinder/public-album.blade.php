@@ -770,7 +770,7 @@
                     this.infoMessage = msg;
                     setTimeout(() => {
                         if (this.infoMessage === msg) this.infoMessage = '';
-                    }, 3000);
+                    }, 10000);
                 },
 
             };

@@ -54,6 +54,18 @@ services:
       networks:
         - laravel-net
 
+  fastapi:
+    build:
+      context: ./fast-api-face-rec
+      dockerfile: Dockerfile
+    container_name: face_finder_fastapi
+    ports:
+      - "8005:8005"
+    networks:
+      - laravel-net
+    depends_on:
+      - app
+
 models:
   llama3.2:
     model: ai/llama3.2
