@@ -65,8 +65,8 @@
                     <span class="font-medium">Your Albums</span>
                 </a>
 
-                <a href="#"
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-slate-700 hover:bg-slate-100 hover:text-slate-900">
+                <a href="{{ route('face_finder.manage_subscription') }}"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ request()->routeIs('face_finder.manage_subscription') ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900' }}">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                     </svg>
@@ -111,6 +111,15 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
+                        @if(isUserOnTrial())
+                            <a href="{{ route('face_finder.manage_subscription') }}"
+                               class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-colors inline-flex items-center gap-2 shadow-md hover:shadow-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                <span class="hidden sm:inline font-semibold">Upgrade</span>
+                            </a>
+                        @endif
                         <form method="POST" action="{{ route('logout') }}" class="inline">
                             @csrf
                             <button type="submit"

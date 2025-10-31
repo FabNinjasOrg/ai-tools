@@ -6,6 +6,8 @@ use App\Models\Album;
 use App\Models\Photo;
 use App\Models\OtpVerificationAttempt;
 use App\Models\User;
+use App\Models\SubscriptionPlan;
+use App\Models\SubscriptionPlanPrice;
 use App\Jobs\PrepareMatchedPhotosZip;
 use App\Jobs\ProcessAlbumPhotoJob;
 use Illuminate\Http\Request;
@@ -30,14 +32,44 @@ class FaceFinderController extends Controller
 
     public function pricing()
     {
-        return view('faceFinder.pricing');
+        if (Auth::check()) {
+            return redirect()->route('face_finder.manage_subscription');
+        }
+
+        $currency = 'USD'; // Always USD for guests
+        $plans = $this->getPricingPlans($currency);
+
+        return view('faceFinder.pricing', compact('plans', 'currency'));
     }
 
     public function uploadAlbumPage()
     {
-        $isUserOnTrial = isUserOnTrial();
+        return view('faceFinder.face-finder');
+    }
 
-        return view('faceFinder.face-finder', compact('isUserOnTrial'));
+    public function updateCountryCode(Request $request)
+    {
+        $validated = $request->validate([
+            'country_code' => 'required|string|max:3'
+        ]);
+
+        $user = Auth::user();
+
+        // Only update if country_code is not already set
+        if (empty($user->country_code)) {
+            $user->country_code = strtoupper($validated['country_code']);
+            $user->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Country code updated successfully'
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Country code already set'
+        ]);
     }
 
     public function show(string $uuid)
@@ -723,6 +755,45 @@ class FaceFinderController extends Controller
             Log::error('Failed to dispatch ZIP preparation job', ['error' => $e->getMessage()]);
             return response()->json(['error' => 'Failed to start ZIP preparation'], 500);
         }
+    }
+
+    public function manageSubscription()
+    {
+        $user = Auth::user();
+        $currency = 'USD';
+
+        if ($user && $user->country_code === 'IN') {
+            $currency = 'INR';
+        }
+
+        $plans = $this->getPricingPlans($currency);
+
+        return view('faceFinder.buy-subscription', compact('plans', 'currency'));
+    }
+    
+    private function getPricingPlans($currency = 'USD')
+    {
+        $plans = SubscriptionPlan::active()
+            ->with(['prices' => function ($query) {
+                $query->active()->orderBy('plan_interval');
+            }])
+            ->orderBy('id')
+            ->get();
+
+        return $plans->map(function ($plan) use ($currency) {
+            $priceField = $currency === 'INR' ? 'inr_price' : 'usd_price';
+
+            $monthlyPrice = $plan->prices->firstWhere('plan_interval', 'monthly');
+            $yearlyPrice = $plan->prices->firstWhere('plan_interval', 'yearly');
+
+            return [
+                'id' => $plan->id,
+                'name' => $plan->name,
+                'storage' => $plan->storage,
+                'monthly' => $monthlyPrice ? $monthlyPrice->$priceField : 0,
+                'yearly' => $yearlyPrice ? $yearlyPrice->$priceField : 0,
+            ];
+        })->toArray();
     }
 
 }

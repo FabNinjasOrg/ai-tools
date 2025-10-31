@@ -150,10 +150,7 @@
                     <p class="text-[13px] text-slate-600 mt-1">Create albums freely within your plan storage.</p>
                 </div>
             </div>
-
-
         </section>
-
 
     </div>
 @endsection

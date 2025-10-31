@@ -12,5 +12,3 @@
     <!-- Footer -->
     @include('faceFinder.layout.footer')
 @endsection
-
-

@@ -151,9 +151,12 @@
                             localStorage.removeItem('ff_uploading_album');
                             await this.loadAlbums();
                             this.$store.messages.showSuccess(`Album "${name}" has been successfully processed!`, 5000);
-                        } else if (status === 'processing' || status === 'pending') {
+                        } else if (status === 'inprogress') {
                             this.$store.messages.showInfo(`Album "${name}" is still processing...`, 0);
                             setTimeout(() => this.checkUploadStatus(uuid, name), 5000);
+                        } else if (status === 'failed') {
+                            localStorage.removeItem('ff_uploading_album');
+                            this.$store.messages.showError(`Album "${name}" processing failed. Please try uploading again.`);
                         }
                     } catch (e) {
                         console.error(e);

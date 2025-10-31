@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="max-w-7xl mx-auto px-6">
-        @if($isUserOnTrial)
+        @if(isUserOnTrial())
             <div class="mb-8 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 shadow-lg p-6 relative">
                 <button class="absolute top-6 right-6 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold text-sm hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg">
                     Upgrade Now
@@ -247,5 +247,46 @@
                 }
             }
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const hasCountryCode = {{ auth()->user()->country_code ? 'true' : 'false' }};
+
+            if (!hasCountryCode) {
+                detectAndSaveCountryCode();
+            }
+
+            async function detectAndSaveCountryCode() {
+                try {
+                    const response = await fetch('https://ipapi.co/json/');
+                    const data = await response.json();
+
+                    if (data.country_code) {
+                        await saveCountryCode(data.country_code);
+                    }
+                } catch (error) {
+                    console.log('Could not detect country code:', error);
+                }
+            }
+
+            async function saveCountryCode(countryCode) {
+                try {
+                    const response = await fetch('{{ route('face_finder.update_country_code') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            country_code: countryCode
+                        })
+                    });
+
+                    const result = await response.json();
+                    console.log('Country code saved:', result);
+                } catch (error) {
+                    console.error('Failed to save country code:', error);
+                }
+            }
+        });
     </script>
 @endsection
