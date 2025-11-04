@@ -6,6 +6,7 @@ use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SubscriptionController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken as MiddlewareVerifyCsrfToken;
 
 Route::get('/', function () {
     return view('welcome');
@@ -20,6 +21,8 @@ Route::post('/summarybot', [ModelController::class, 'summaryBot'])->name('summar
 
 // routes for face finder app
 Route::prefix('face-finder')->group(function () {
+    Route::withoutMiddleware([MiddlewareVerifyCsrfToken::class])->post('/webhook/razorpay', [SubscriptionController::class, 'handleRazorpayWebhook'])->name('webhook.razorpay');
+
     Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirectToGoogle'])->name('google.redirect');
     Route::get('/auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback'])->name('google.callback');
 
@@ -36,13 +39,15 @@ Route::prefix('face-finder')->group(function () {
         Route::get('albums/{uuid}/upload-status', [FaceFinderController::class, 'zipfileUploadStatus'])->name('zipfileUploadStatus');
         Route::post('albums/{uuid}/generate-public', [FaceFinderController::class, 'generatePublic'])->name('face_finder.albums.generate_public');
         Route::delete('albums/{uuid}', [FaceFinderController::class, 'deleteAlbum'])->name('face_finder.albums.delete');
+        Route::get('buy-subscription', [FaceFinderController::class, 'buySubscription'])->name('face_finder.buy_subscription');
         Route::get('manage-subscription', [FaceFinderController::class, 'manageSubscription'])->name('face_finder.manage_subscription');
 
         Route::get('profile', [ProfileController::class, 'edit'])->name('face_finder.profile.edit');
         Route::patch('profile', [ProfileController::class, 'update'])->name('face_finder.profile.update');
         Route::delete('profile', [ProfileController::class, 'destroy'])->name('face_finder.profile.destroy');
 
-        Route::post('select-plan', [SubscriptionController::class, 'selectPlan'])->name('face_finder.select_plan');
+        Route::post('select-plan', [SubscriptionController::class, 'subscribePlan'])->name('face_finder.subscribe_plan');
+        Route::post('cancel-subscription', [SubscriptionController::class, 'cancelSubscription'])->name('face_finder.subscription.cancel');
     });
 });
 

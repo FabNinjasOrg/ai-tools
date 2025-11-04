@@ -12,6 +12,7 @@ class SubscriptionPlan extends Model
 
     protected $fillable = [
         'name',
+        'razorpay_plan_id',
         'storage',
         'status',
     ];
@@ -21,27 +22,19 @@ class SubscriptionPlan extends Model
     ];
 
     /**
-     * Get the prices for this plan
+     * Get the price for this plan (one-to-one relationship)
+     */
+    public function price()
+    {
+        return $this->hasOne(SubscriptionPlanPrice::class);
+    }
+
+    /**
+     * Get the prices for this plan (for backward compatibility)
      */
     public function prices(): HasMany
     {
         return $this->hasMany(SubscriptionPlanPrice::class);
-    }
-
-    /**
-     * Get monthly price for this plan
-     */
-    public function monthlyPrice()
-    {
-        return $this->prices()->where('plan_interval', 'monthly')->first();
-    }
-
-    /**
-     * Get yearly price for this plan
-     */
-    public function yearlyPrice()
-    {
-        return $this->prices()->where('plan_interval', 'yearly')->first();
     }
 
     /**

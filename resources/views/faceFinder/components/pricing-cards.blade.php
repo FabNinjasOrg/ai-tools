@@ -1,5 +1,5 @@
 <!-- Pricing Section Component -->
-<form method="POST" action="{{ route('face_finder.select_plan') }}" class="mb-8 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-lg p-8" x-data="pricingData()">
+<form method="POST" action="{{ route('face_finder.subscribe_plan') }}" class="mb-8 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-lg p-8" x-data="pricingData()">
     @csrf
     <!-- Header -->
     <div class="text-center mb-6">
@@ -20,56 +20,56 @@
                     Yearly
                 </button>
             </div>
-            <input type="hidden" name="billing_cycle" x-model="billingCycle">
         </div>
     </div>
 
     <!-- Pricing Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-5" x-data="{ selectedPlan: null }">
-        @foreach($plans ?? [] as $plan)
         @php
             // Derive currency symbol from currency code
             $currencySymbol = $currency === 'INR' ? '₹' : '$';
         @endphp
+
+        <template x-for="(plan, index) in getFilteredPlans()" :key="plan.id">
         <div class="rounded-2xl bg-white border shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer relative"
-             :class="selectedPlan === {{ $plan['id'] }} ? 'border-green-500 border-2 ring-2 ring-green-200' : 'border-slate-200'"
-             @click="selectedPlan = {{ $plan['id'] }}">
+             :class="selectedPlan === plan.id ? 'border-green-500 border-2 ring-2 ring-green-200' : 'border-slate-200'"
+             @click="selectedPlan = plan.id">
 
             <!-- Icon in Top Right Corner -->
-            @if($loop->index === 0)
+            <template x-if="index === 0">
                 <div class="absolute top-4 right-4 h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
                     <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                     </svg>
                 </div>
-            @elseif($loop->index === 1)
+            </template>
+            <template x-if="index === 1">
                 <div class="absolute top-4 right-4 h-12 w-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-md">
                     <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
                     </svg>
                 </div>
-            @else
+            </template>
+            <template x-if="index === 2">
                 <div class="absolute top-4 right-4 h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-md">
                     <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                     </svg>
                 </div>
-            @endif
+            </template>
 
             <!-- Radio Button and Title -->
             <div class="flex items-center gap-2 mb-4">
-                <input type="radio" name="plan_id" value="{{ $plan['id'] }}"
+                <input type="radio" name="plan_id" :value="plan.id"
                        x-model="selectedPlan"
-                       id="plan_{{ $plan['id'] }}"
+                       :id="'plan_' + plan.id"
                        class="h-5 w-5 text-green-600 focus:ring-green-500 border-slate-300 cursor-pointer"
                        required>
-                <label for="plan_{{ $plan['id'] }}" class="text-lg font-bold text-slate-900 cursor-pointer">{{ $plan['name'] }}</label>
+                <label :for="'plan_' + plan.id" class="text-lg font-bold text-slate-900 cursor-pointer" x-text="plan.name"></label>
             </div>
             <div class="mb-4">
                 <div class="flex items-baseline gap-1">
-                    <span class="text-3xl font-bold text-slate-900" x-text="currencySymbol + getPrice({{ $loop->index }})">
-                        {{ $currencySymbol }}{{ $plan['monthly'] }}
-                    </span>
+                    <span class="text-3xl font-bold text-slate-900" x-text="currencySymbol + plan.price"></span>
                     <span class="text-sm text-slate-600">/ <span x-text="billingCycle === 'monthly' ? 'month' : 'year'">month</span></span>
                 </div>
             </div>
@@ -78,7 +78,7 @@
                     <svg class="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
-                    <span class="text-sm text-slate-700"><strong>{{ $plan['storage'] }}</strong> storage</span>
+                    <span class="text-sm text-slate-700"><strong x-text="plan.storage"></strong> storage</span>
                 </li>
                 <li class="flex items-start gap-2">
                     <svg class="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,14 +94,14 @@
                 </li>
             </ul>
         </div>
-        @endforeach
+        </template>
     </div>
 
     <!-- Submit Button -->
     <div class="mt-8 text-center">
         @auth
             <button type="submit" class="px-8 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white text-base font-semibold hover:from-green-700 hover:to-emerald-700 transition-colors shadow-lg hover:shadow-xl">
-                Continue with Selected Plan
+                Subscribe to Selected Plan
             </button>
         @else
             <a href="{{ route('login') }}" class="inline-block px-8 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white text-base font-semibold hover:from-green-700 hover:to-emerald-700 transition-colors shadow-lg hover:shadow-xl">
@@ -110,6 +110,8 @@
         @endauth
     </div>
 </form>
+
+{{-- <script src="https://checkout.razorpay.com/v1/checkout.js"></script> --}}
 <script>
     function pricingData() {
         return {
@@ -121,13 +123,43 @@
                 return this.currency === 'INR' ? '₹' : '$';
             },
 
-            getPrice(planIndex) {
-                const plan = this.plans[planIndex];
-                if (!plan) return 0;
-
-                // Simply return monthly or yearly price based on billing cycle
-                return plan[this.billingCycle] || 0;
+            getFilteredPlans() {
+                // Filter plans based on billing cycle
+                return this.plans.filter(plan => plan.billing_type === this.billingCycle);
             }
         };
     }
 </script>
+
+{{-- @if (session('razorPayDeatils.subscription_id'))
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        try {
+            var subscriptionId = @json(session('razorPayDeatils.subscription_id'));
+            if (!subscriptionId) return;
+
+            var options = {
+                key: "{{ env('RAZOR_PAY_API_KEY_ID') }}",
+                subscription_id: subscriptionId,
+                name: 'AI Tools',
+                description: 'Subscription payment',
+                theme: { color: '#10b981' },
+                // success handler
+                handler: function (response) {
+                    window.location.reload();
+                },
+                modal: {
+                    ondismiss: function () {
+                        //
+                    }
+                }
+            };
+
+            var rzp = new Razorpay(options);
+            rzp.open();
+        } catch (e) {
+            console.error('Razorpay init error', e);
+        }
+    });
+</script>
+@endif --}}

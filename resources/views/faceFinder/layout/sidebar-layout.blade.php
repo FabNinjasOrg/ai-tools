@@ -65,6 +65,7 @@
                     <span class="font-medium">Your Albums</span>
                 </a>
 
+                @if(!isUserOnTrial())
                 <a href="{{ route('face_finder.manage_subscription') }}"
                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ request()->routeIs('face_finder.manage_subscription') ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900' }}">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -72,6 +73,17 @@
                     </svg>
                     <span class="font-medium">Manage Subscription</span>
                 </a>
+                @endif
+
+                @if(isUserOnTrial() || userOnLastSubscriptionCycle())
+                <a href="{{ route('face_finder.buy_subscription') }}"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ request()->routeIs('face_finder.buy_subscription') ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900' }}">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    <span class="font-medium">Buy Subscription</span>
+                </a>
+                @endif
             </nav>
 
             <!-- Profile Section (Bottom) -->
@@ -207,5 +219,45 @@
             </main>
         </div>
     </div>
+@endsection
+
+@section('scripts')
+    @parent
+    @if ($errors->any() || session('error') )
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var serverError = @json($errors->first() ?: session('error'));
+                if (!serverError) return;
+
+                (function waitForAlpine() {
+                    try {
+                        if (window.Alpine && Alpine.store && Alpine.store('messages')) {
+                            Alpine.store('messages').showError(serverError, 0);
+                            return;
+                        }
+                    } catch (e) {}
+                    setTimeout(waitForAlpine, 50);
+                })();
+            });
+        </script>
+    @endif
+    @if (session('success'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var serverSuccess = @json(session('success'));
+                if (!serverSuccess) return;
+
+                (function waitForAlpine() {
+                    try {
+                        if (window.Alpine && Alpine.store && Alpine.store('messages')) {
+                            Alpine.store('messages').showSuccess(serverSuccess);
+                            return;
+                        }
+                    } catch (e) {}
+                    setTimeout(waitForAlpine, 50);
+                })();
+            });
+        </script>
+    @endif
 @endsection
 

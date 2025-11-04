@@ -33,11 +33,11 @@ class FaceFinderController extends Controller
     public function pricing()
     {
         if (Auth::check()) {
-            return redirect()->route('face_finder.manage_subscription');
+            return redirect()->route('face_finder.buy_subscription');
         }
 
         $currency = 'USD'; // Always USD for guests
-        $plans = $this->getPricingPlans($currency);
+        $plans = $this->getPlanData($currency);
 
         return view('faceFinder.pricing', compact('plans', 'currency'));
     }
@@ -757,6 +757,20 @@ class FaceFinderController extends Controller
         }
     }
 
+    public function buySubscription()
+    {
+        $user = Auth::user();
+        $currency = 'USD';
+
+        if ($user && $user->country_code === 'IN') {
+            $currency = 'INR';
+        }
+
+        $plans = $this->getPlanData($currency);
+
+        return view('faceFinder.buy-subscription', compact('plans', 'currency'));
+    }
+
     public function manageSubscription()
     {
         $user = Auth::user();
@@ -766,34 +780,84 @@ class FaceFinderController extends Controller
             $currency = 'INR';
         }
 
-        $plans = $this->getPricingPlans($currency);
+        if(userSubscribedButPaymentPending() || userSubscriptionActivated() || userOnLastSubscriptionCycle()) {
+            $currentSubscription = $user->subscriptions()
+                ->where('type', 'subscription')
+                ->latest()
+                ->first();
 
-        return view('faceFinder.buy-subscription', compact('plans', 'currency'));
+            $planData = null;
+            $subscriptionDetails = null;
+
+            if ($currentSubscription && $currentSubscription->plan_id) {
+                // Get plan data for the specific plan
+                $planData = $this->getPlanData($currency, $currentSubscription->plan_id);
+
+                // Build subscription details
+                $subscriptionDetails = [
+                    'subscription_id' => $currentSubscription->subscription_id,
+                    'status' => $currentSubscription->status,
+                    'start_date' => $currentSubscription->start_date,
+                    'end_date' => $currentSubscription->end_date,
+                    'payment_gateway' => $currentSubscription->payment_gateway,
+                ];
+            }
+            $currencySymbol = $currency === 'INR' ? '₹' : '$';
+
+            return view('faceFinder.manage-subscription', [
+                'currency' => $currency,
+                'currencySymbol' => $currencySymbol,
+                'planData' => $planData,
+                'subscriptionDetails' => $subscriptionDetails
+            ]);
+        }else{
+            return redirect()->route('face_finder.buy_subscription');
+        }
     }
-    
-    private function getPricingPlans($currency = 'USD')
+
+    private function getPlanData($currency = 'USD', $planId = null)
     {
-        $plans = SubscriptionPlan::active()
+        $subscriptionPlan = SubscriptionPlan::query()
             ->with(['prices' => function ($query) {
-                $query->active()->orderBy('plan_interval');
-            }])
-            ->orderBy('id')
-            ->get();
+                $query->active();
+            }]);
+
+        // If plan ID is provided, get specific plan
+        if ($planId) {
+            $subscriptionPlan->where('id', $planId);
+            $plan = $subscriptionPlan->first();
+
+            if (!$plan) {
+                return null;
+            }
+
+            return $this->formatPlanData($plan, $currency);
+        }
+
+        // Get all active plans
+        $plans = $subscriptionPlan->active()->orderBy('id')->get();
 
         return $plans->map(function ($plan) use ($currency) {
-            $priceField = $currency === 'INR' ? 'inr_price' : 'usd_price';
-
-            $monthlyPrice = $plan->prices->firstWhere('plan_interval', 'monthly');
-            $yearlyPrice = $plan->prices->firstWhere('plan_interval', 'yearly');
-
-            return [
-                'id' => $plan->id,
-                'name' => $plan->name,
-                'storage' => $plan->storage,
-                'monthly' => $monthlyPrice ? $monthlyPrice->$priceField : 0,
-                'yearly' => $yearlyPrice ? $yearlyPrice->$priceField : 0,
-            ];
+            return $this->formatPlanData($plan, $currency);
         })->toArray();
+    }
+
+    private function formatPlanData($plan, $currency)
+    {
+        $priceField = $currency === 'INR' ? 'inr_price' : 'usd_price';
+        $planIdField = $currency === 'INR' ? 'razorpay_plan_id' : 'stripe_plan_id';
+
+        $price = $plan->prices->first();
+
+        return [
+            'id' => $plan->id,
+            'name' => $plan->name,
+            'plan_id' => $plan->$planIdField,
+            'storage' => $plan->storage,
+            'price' => $price ? $price->$priceField : 0,
+            'amount' => $price ? $price->$priceField : null,
+            'billing_type' => str_contains(strtolower($plan->name), 'monthly') ? 'monthly' : 'yearly',
+        ];
     }
 
 }

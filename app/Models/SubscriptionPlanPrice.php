@@ -12,7 +12,6 @@ class SubscriptionPlanPrice extends Model
 
     protected $fillable = [
         'subscription_plan_id',
-        'plan_interval',
         'inr_price',
         'usd_price',
         'status',
@@ -22,7 +21,6 @@ class SubscriptionPlanPrice extends Model
         'inr_price' => 'decimal:2',
         'usd_price' => 'decimal:2',
         'status' => 'string',
-        'plan_interval' => 'string',
     ];
 
     /**
@@ -39,21 +37,5 @@ class SubscriptionPlanPrice extends Model
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
-    }
-
-    /**
-     * Scope to get monthly prices
-     */
-    public function scopeMonthly($query)
-    {
-        return $query->where('plan_interval', 'monthly');
-    }
-
-    /**
-     * Scope to get yearly prices
-     */
-    public function scopeYearly($query)
-    {
-        return $query->where('plan_interval', 'yearly');
     }
 }

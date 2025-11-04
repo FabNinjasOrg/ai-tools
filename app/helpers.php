@@ -16,7 +16,6 @@ if (!function_exists('isUserOnTrial')) {
             return false;
         }
 
-        /** @phpstan-ignore-next-line */
         return $user->subscriptions()
             ->where('type', 'trial')
             ->where('status', 'active')
@@ -24,3 +23,60 @@ if (!function_exists('isUserOnTrial')) {
     }
 }
 
+if (!function_exists('userSubscribedButPaymentPending')) {
+    /**
+     * @return bool
+     */
+    function userSubscribedButPaymentPending(): bool
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return false;
+        }
+
+        return $user->subscriptions()
+            ->where('type', 'subscription')
+            ->where('status', 'created')
+            ->exists();
+    }
+}
+
+if (!function_exists('userSubscriptionActivated')) {
+    /**
+     * @return bool
+     */
+    function userSubscriptionActivated(): bool
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return false;
+        }
+
+        return $user->subscriptions()
+            ->where('type', 'subscription')
+            ->where('status', 'active')
+            ->exists();
+    }
+}
+
+if (!function_exists('userOnLastSubscriptionCycle')) {
+    /**
+     * @return bool
+     */
+    function userOnLastSubscriptionCycle(): bool
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return false;
+        }
+
+        return $user->subscriptions()
+            ->where('type', 'subscription')
+            ->where('status', 'cancelled')
+            ->whereDate('end_date', '>', now())
+            ->exists();
+    }
+}

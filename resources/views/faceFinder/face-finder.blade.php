@@ -61,6 +61,28 @@
                     </div>
                 </div>
             </div>
+        @elseif(userSubscribedButPaymentPending())
+            <div class="mb-8 rounded-2xl border border-yellow-200 bg-gradient-to-r from-yellow-50 to-yellow-100 shadow-lg p-6">
+                <div class="flex items-start gap-4">
+                    <div class="flex-shrink-0">
+                        <div class="h-12 w-12 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center">
+                            <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold text-yellow-900 mb-2">Payment Pending</h3>
+                        <p class="text-yellow-800 text-sm">Your subscription is active but payment is pending. Please complete the payment to enjoy uninterrupted access to all features.</p>
+                        <div class="mt-4">
+                            <a href="{{ route('face_finder.manage_subscription') }}"
+                               class="inline-block px-4 py-2 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold text-sm hover:from-green-700 hover:to-emerald-700 transition-colors shadow-md hover:shadow-lg">
+                                Pay Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         @endif
 
         <div x-data="uploadAlbumApp()" x-cloak>

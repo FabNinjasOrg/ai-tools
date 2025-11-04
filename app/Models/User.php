@@ -23,6 +23,8 @@ class User extends Authenticatable
         'email',
         'password',
         'google_id',
+        'razorpay_customer_id',
+        'stripe_customer_id',
         'country_code',
     ];
 

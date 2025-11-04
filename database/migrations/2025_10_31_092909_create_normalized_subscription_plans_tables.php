@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('subscription_plans', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
+            $table->string('razorpay_plan_id')->nullable();
             $table->string('storage');
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->timestamps();
@@ -23,7 +24,6 @@ return new class extends Migration
         Schema::create('subscription_plan_prices', function (Blueprint $table) {
             $table->id();
             $table->foreignId('subscription_plan_id')->constrained('subscription_plans')->onDelete('cascade');
-            $table->enum('plan_interval', ['monthly', 'yearly']);
             $table->decimal('inr_price', 10, 2);
             $table->decimal('usd_price', 10, 2);
             $table->enum('status', ['active', 'inactive'])->default('active');
