@@ -38,8 +38,8 @@ class PrepareMatchedPhotosZip implements ShouldQueue
     public function handle(): void
     {
         try {
-            $album = Album::query()->where('uuid', $this->albumUuid)->firstOrFail(['id','uuid']);
-
+            $album = Album::query()->where('uuid', $this->albumUuid)->firstOrFail(['id','uuid','user_id']);
+            logger($album->toArray());
             // Get photos
             $photos = Photo::query()
                 ->whereIn('id', $this->photoIds)
@@ -87,7 +87,7 @@ class PrepareMatchedPhotosZip implements ShouldQueue
             $zip->close();
 
             // Upload ZIP file to S3
-            $s3ZipPath = "FaceFinder/ZIPs/{$this->albumUuid}/{$zipFileName}";
+            $s3ZipPath = "FaceFinder/ZIPs/{$album->user_id}/{$this->albumUuid}/{$zipFileName}";
             Storage::disk('s3')->put($s3ZipPath, file_get_contents($zipPath), 'private');
 
             // Generate temporary URL for S3 file

@@ -133,6 +133,27 @@
                                 </button>
                             </div>
                             @elseif($status == 'active')
+                            <div class="relative mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 shadow-sm overflow-hidden">
+                                <div class="absolute inset-y-0 right-0 w-28 bg-gradient-to-l from-emerald-200/70 to-transparent pointer-events-none"></div>
+                                <div class="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+                                    <div class="flex items-start gap-3">
+                                        <span class="flex h-10 w-10 items-center justify-center rounded-full bg-white text-emerald-600 shadow-inner">
+                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
+                                        </span>
+                                        <div>
+                                            <p class="text-sm font-semibold text-emerald-900">Looking for more features?</p>
+                                            <p class="text-xs text-emerald-700 mt-1">Upgrade your plan to unlock higher limits and advanced capabilities.</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex sm:items-end">
+                                        <a href="{{ route('face_finder.buy_subscription') }}"
+                                           class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold text-sm shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 transition-colors">
+                                            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
+                                            Upgrade Plan
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="relative rounded-2xl border border-rose-200 bg-rose-50/80 p-5 shadow-sm overflow-hidden">
                                 <div class="absolute inset-y-0 right-0 w-28 bg-gradient-to-l from-rose-200/70 to-transparent pointer-events-none"></div>
                                 <div class="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">

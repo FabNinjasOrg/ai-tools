@@ -33,6 +33,11 @@ class UserSubscription extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(SubscriptionPlan::class, 'plan_id');
+    }
+
     public function isActive(): bool
     {
         return $this->status === 'active';

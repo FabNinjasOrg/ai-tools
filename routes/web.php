@@ -4,6 +4,7 @@ use App\Http\Controllers\ModelController;
 use App\Http\Controllers\FaceFinderController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\StorageController;
 use App\Http\Controllers\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken as MiddlewareVerifyCsrfToken;
@@ -41,6 +42,7 @@ Route::prefix('face-finder')->group(function () {
         Route::delete('albums/{uuid}', [FaceFinderController::class, 'deleteAlbum'])->name('face_finder.albums.delete');
         Route::get('buy-subscription', [FaceFinderController::class, 'buySubscription'])->name('face_finder.buy_subscription');
         Route::get('manage-subscription', [FaceFinderController::class, 'manageSubscription'])->name('face_finder.manage_subscription');
+        Route::get('storage', [StorageController::class, 'index'])->name('face_finder.storage');
 
         Route::get('profile', [ProfileController::class, 'edit'])->name('face_finder.profile.edit');
         Route::patch('profile', [ProfileController::class, 'update'])->name('face_finder.profile.update');
@@ -48,6 +50,8 @@ Route::prefix('face-finder')->group(function () {
 
         Route::post('select-plan', [SubscriptionController::class, 'subscribePlan'])->name('face_finder.subscribe_plan');
         Route::post('cancel-subscription', [SubscriptionController::class, 'cancelSubscription'])->name('face_finder.subscription.cancel');
+        Route::get('billing', [SubscriptionController::class, 'billing'])->name('face_finder.billing');
+        Route::get('billing-data', [SubscriptionController::class, 'billingData'])->name('face_finder.billing.data');
     });
 });
 

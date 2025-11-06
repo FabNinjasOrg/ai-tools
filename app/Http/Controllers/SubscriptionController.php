@@ -6,10 +6,11 @@ use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Models\UserPayment;
 use Illuminate\Http\Request;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Razorpay\Api\Api;
+use Yajra\DataTables\Facades\DataTables;
 
 class SubscriptionController extends Controller
 {
@@ -194,5 +195,69 @@ class SubscriptionController extends Controller
         }
 
         return response()->json(['status' => 'ok']);
+    }
+
+    public function billing()
+    {
+        // Redirect trial users to buy subscription page
+        if (!userHasAccessibility()) {
+            return redirect()->route('face_finder.buy_subscription');
+        }
+
+        $userId = Auth::id();
+
+        // Get payment statistics
+        $totalPayments = UserPayment::where('user_id', $userId)
+            ->where('status', 'completed')
+            ->sum('amount');
+
+        $failedPayments = UserPayment::where('user_id', $userId)
+            ->where('status', 'failed')
+            ->count();
+
+        $totalTransactions = UserPayment::where('user_id', $userId)->count();
+
+        $firstPayment = UserPayment::where('user_id', $userId)
+            ->where('status', 'completed')
+            ->first();
+
+        $currency = $firstPayment ? $firstPayment->currency : 'INR';
+
+        return view('faceFinder.billing', compact('totalPayments', 'failedPayments', 'totalTransactions', 'currency'));
+    }
+
+    public function billingData(Request $request)
+    {
+        if ($request->ajax()) {
+            $data = UserPayment::with('user')
+                ->where('user_id', Auth::id())
+                ->orderBy('payment_time', 'desc')
+                ->get();
+
+            return DataTables::of($data)
+                ->addIndexColumn()
+                ->editColumn('payment_time', function ($row) {
+                    return $row->payment_time ? $row->payment_time->format('d M Y, h:i A') : '-';
+                })
+                ->editColumn('amount', function ($row) {
+                    return $row->currency . ' ' . number_format($row->amount, 2);
+                })
+                ->editColumn('status', function ($row) {
+                    $statusColors = [
+                        'completed' => 'bg-green-100 text-green-700',
+                        'failed' => 'bg-red-100 text-red-700',
+                        'pending' => 'bg-yellow-100 text-yellow-700',
+                        'refunded' => 'bg-blue-100 text-blue-700',
+                    ];
+
+                    $colorClass = $statusColors[$row->status] ?? 'bg-gray-100 text-gray-700';
+
+                    return '<span class="px-2 py-1 text-xs font-semibold rounded-full ' . $colorClass . '">'
+                           . ucfirst($row->status)
+                           . '</span>';
+                })
+                ->rawColumns(['status'])
+                ->make(true);
+        }
     }
 }

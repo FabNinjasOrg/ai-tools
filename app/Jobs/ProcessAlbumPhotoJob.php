@@ -16,6 +16,7 @@ class ProcessAlbumPhotoJob implements ShouldQueue
     use Queueable, Batchable;
 
     public int $albumId;
+    public int $userId;
     public string $uuid;
     public array $photoEntries;
     public string $zipPath;
@@ -26,9 +27,10 @@ class ProcessAlbumPhotoJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct($albumId, $uuid, array $photoEntries, string $zipPath)
+    public function __construct($albumId, $userId, $uuid, array $photoEntries, string $zipPath)
     {
         $this->albumId = $albumId;
+        $this->userId = $userId;
         $this->uuid = $uuid;
         $this->photoEntries = $photoEntries;
         $this->zipPath = $zipPath;
@@ -39,7 +41,7 @@ class ProcessAlbumPhotoJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $s3Folder = "FaceFinder/Albums/{$this->uuid}";
+        $s3Folder = "FaceFinder/Albums/{$this->userId}/{$this->uuid}";
         $zip = new ZipArchive();
 
         if ($zip->open($this->zipPath) !== true) {
@@ -63,7 +65,7 @@ class ProcessAlbumPhotoJob implements ShouldQueue
                 Storage::disk('s3')->put($photoS3Path, $content, 'private');
 
                 // Create temp file for embedding the photo
-                $tempPath = storage_path("app/tmp_embedding/{$this->uuid}/{$filename}");
+                $tempPath = storage_path("app/tmp_embedding/{$this->userId}/{$this->uuid}/{$filename}");
                 if (!is_dir(dirname($tempPath))) mkdir(dirname($tempPath), 0775, true);
                 file_put_contents($tempPath, $content);
 

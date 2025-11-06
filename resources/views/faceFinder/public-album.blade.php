@@ -97,7 +97,7 @@
                                 x-text="`${matchedPhotos.length} matched ${matchedPhotos.length === 1 ? 'photo' : 'photos'}`"></span>
                         </div>
 
-                        @if(!$isOwnerOnTrial)
+                        @if(userHasAccessibility())
                         <!-- Download Zip Button -->
                         <button @click="downloadMatchedPhotosZip()"
                             class="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium shadow hover:from-purple-700 hover:to-indigo-700 inline-flex items-center gap-2">

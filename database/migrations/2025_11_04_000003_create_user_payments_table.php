@@ -15,6 +15,7 @@ return new class extends Migration
             $table->bigIncrements('id');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('payment_id');
+            $table->string('subscription_id')->nullable();
             $table->decimal('amount', 12, 2);
             $table->string('currency', 10)->nullable();
             $table->string('invoice_id')->nullable();

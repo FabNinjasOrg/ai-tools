@@ -1,6 +1,6 @@
 @extends('faceFinder.layout.sidebar-layout')
 
-@section('page-title', 'Manage Subscription')
+@section('page-title', userSubscriptionActivated() ? 'Upgrade Plan' : 'Buy Subscription')
 
 @section('content')
     <div class="mx-auto px-6">
@@ -61,4 +61,3 @@
         @include('faceFinder.components.pricing-cards')
     </div>
 @endsection
-

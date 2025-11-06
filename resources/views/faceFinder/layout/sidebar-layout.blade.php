@@ -65,7 +65,14 @@
                     <span class="font-medium">Your Albums</span>
                 </a>
 
-                @if(!isUserOnTrial())
+                <a href="{{ route('face_finder.storage') }}"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ request()->routeIs('face_finder.storage') ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900' }}">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                    </svg>
+                    <span class="font-medium">Storage</span>
+                </a>
+
                 <a href="{{ route('face_finder.manage_subscription') }}"
                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ request()->routeIs('face_finder.manage_subscription') ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900' }}">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -73,17 +80,14 @@
                     </svg>
                     <span class="font-medium">Manage Subscription</span>
                 </a>
-                @endif
 
-                @if(isUserOnTrial() || userOnLastSubscriptionCycle())
-                <a href="{{ route('face_finder.buy_subscription') }}"
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ request()->routeIs('face_finder.buy_subscription') ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900' }}">
+                <a href="{{ route('face_finder.billing') }}"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ request()->routeIs('face_finder.billing') ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900' }}">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <span class="font-medium">Buy Subscription</span>
+                    <span class="font-medium">Billing</span>
                 </a>
-                @endif
             </nav>
 
             <!-- Profile Section (Bottom) -->
@@ -123,15 +127,13 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        @if(isUserOnTrial())
-                            <a href="{{ route('face_finder.manage_subscription') }}"
-                               class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-colors inline-flex items-center gap-2 shadow-md hover:shadow-lg">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                </svg>
-                                <span class="hidden sm:inline font-semibold">Upgrade</span>
-                            </a>
-                        @endif
+                        <a href="{{ route('face_finder.buy_subscription') }}"
+                           class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-colors inline-flex items-center gap-2 shadow-md hover:shadow-lg">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            <span class="hidden sm:inline font-semibold">{{ userSubscriptionActivated() ? 'Upgrade Plan' : 'Buy Subscription' }}</span>
+                        </a>
                         <form method="POST" action="{{ route('logout') }}" class="inline">
                             @csrf
                             <button type="submit"

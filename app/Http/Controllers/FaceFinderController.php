@@ -10,6 +10,7 @@ use App\Models\SubscriptionPlan;
 use App\Models\SubscriptionPlanPrice;
 use App\Jobs\PrepareMatchedPhotosZip;
 use App\Jobs\ProcessAlbumPhotoJob;
+use App\Services\CalculateUserStorageService;
 use Illuminate\Http\Request;
 use Auth;
 use Illuminate\Support\Facades\Bus;
@@ -22,6 +23,13 @@ use Illuminate\Support\Facades\Http;
 
 class FaceFinderController extends Controller
 {
+    private $calculateUserStorageService;
+
+    public function __construct(CalculateUserStorageService $calculateUserStorageService)
+    {
+        $this->calculateUserStorageService = $calculateUserStorageService;
+    }
+
     public function faceFinder()
     {
         if (Auth::check()) {
@@ -162,9 +170,7 @@ class FaceFinderController extends Controller
         }
 
         // Check if user is on trial and enforce limits
-        $isUserOnTrial = isUserOnTrial();
-
-        if ($isUserOnTrial) {
+        if (!userHasAccessibility()) {
             // Check single album limit
             $existingAlbum = Album::where('user_id', $userId)->first();
             if ($existingAlbum) {
@@ -174,10 +180,17 @@ class FaceFinderController extends Controller
             }
         }
 
+        // Check user storage limit
+        if(isUserStorageFull()){
+            return response()->json([
+                'message' => 'Your storage limit has been reached. Please upgrade your subscription to upload more photos. Or delete existing albums to free up space.'
+            ], 422);
+        }
+
         $uuid = (string) Str::uuid();
 
         // Extract ZIP temporarily locally
-        $localTempDir = storage_path("app/tmp_zip_extract/{$uuid}");
+        $localTempDir = storage_path("app/tmp_zip_extract/{$userId}/{$uuid}");
         if (!is_dir($localTempDir)) {
             mkdir($localTempDir, 0775, true);
         }
@@ -225,7 +238,7 @@ class FaceFinderController extends Controller
         }
 
         // Check trial user photo limit BEFORE uploading
-        if ($isUserOnTrial && count($photos) > 10) {
+        if (!userHasAccessibility() && count($photos) > 10) {
             return response()->json([
                 'message' => 'Trial users can upload up to 10 images only. Upgrade your subscription for more.'
             ], 422);
@@ -249,7 +262,7 @@ class FaceFinderController extends Controller
 
         // Split into chunks, 100 photos per job
         foreach (array_chunk($photos, 100) as $chunk) {
-            $batchJobs[] = new ProcessAlbumPhotoJob($album->id, $uuid, $chunk, $localTempZipPath);
+            $batchJobs[] = new ProcessAlbumPhotoJob($album->id, $userId, $uuid, $chunk, $localTempZipPath);
         }
 
         $albumId = $album->id;
@@ -352,7 +365,7 @@ class FaceFinderController extends Controller
 
         try {
             $s3 = Storage::disk('s3');
-            $s3Folder = "FaceFinder/Albums/{$album->uuid}";
+            $s3Folder = "FaceFinder/Albums/{$album->user_id}/{$album->uuid}";
 
             // Delete all files in the album folder (ZIP + photos)
             if ($s3->exists($s3Folder)) {
@@ -398,22 +411,9 @@ class FaceFinderController extends Controller
         $album = Album::query()->where('uuid', $uuid)->first(['name', 'user_id']);
         $albumName = $album->name ?? '';
 
-        // Check if album owner is on trial
-        $isOwnerOnTrial = false;
-        if ($album && $album->user_id) {
-            $owner = User::find($album->user_id);
-            if ($owner) {
-                $isOwnerOnTrial = $owner->subscriptions()
-                    ->where('type', 'trial')
-                    ->where('status', 'active')
-                    ->exists();
-            }
-        }
-
         return view('faceFinder.public-album', [
             'uuid' => $uuid,
-            'albumName' => $albumName,
-            'isOwnerOnTrial' => $isOwnerOnTrial
+            'albumName' => $albumName
         ]);
     }
 
@@ -768,11 +768,30 @@ class FaceFinderController extends Controller
 
         $plans = $this->getPlanData($currency);
 
-        return view('faceFinder.buy-subscription', compact('plans', 'currency'));
+        $currentPlanId = null;
+        $paymentPending = userSubscribedButPaymentPending();
+
+        if (userSubscriptionActivated()) {
+            $currentSubscription = $user->subscriptions()
+                ->where('type', 'subscription')
+                ->where('status', 'active')
+                ->latest()
+                ->first();
+
+            if ($currentSubscription && $currentSubscription->plan_id) {
+                $currentPlanId = $currentSubscription->plan_id;
+            }
+        }
+
+        return view('faceFinder.buy-subscription', compact('plans', 'currency', 'currentPlanId', 'paymentPending'));
     }
 
     public function manageSubscription()
     {
+        if (!userHasAccessibility()) {
+            return redirect()->route('face_finder.buy_subscription');
+        }
+
         $user = Auth::user();
         $currency = 'USD';
 
@@ -780,39 +799,35 @@ class FaceFinderController extends Controller
             $currency = 'INR';
         }
 
-        if(userSubscribedButPaymentPending() || userSubscriptionActivated() || userOnLastSubscriptionCycle()) {
-            $currentSubscription = $user->subscriptions()
-                ->where('type', 'subscription')
-                ->latest()
-                ->first();
+        $currentSubscription = $user->subscriptions()
+            ->where('type', 'subscription')
+            ->latest()
+            ->first();
 
-            $planData = null;
-            $subscriptionDetails = null;
+        $planData = null;
+        $subscriptionDetails = null;
 
-            if ($currentSubscription && $currentSubscription->plan_id) {
-                // Get plan data for the specific plan
-                $planData = $this->getPlanData($currency, $currentSubscription->plan_id);
+        if ($currentSubscription && $currentSubscription->plan_id) {
+            // Get plan data for the specific plan
+            $planData = $this->getPlanData($currency, $currentSubscription->plan_id);
 
-                // Build subscription details
-                $subscriptionDetails = [
-                    'subscription_id' => $currentSubscription->subscription_id,
-                    'status' => $currentSubscription->status,
-                    'start_date' => $currentSubscription->start_date,
-                    'end_date' => $currentSubscription->end_date,
-                    'payment_gateway' => $currentSubscription->payment_gateway,
-                ];
-            }
-            $currencySymbol = $currency === 'INR' ? '₹' : '$';
-
-            return view('faceFinder.manage-subscription', [
-                'currency' => $currency,
-                'currencySymbol' => $currencySymbol,
-                'planData' => $planData,
-                'subscriptionDetails' => $subscriptionDetails
-            ]);
-        }else{
-            return redirect()->route('face_finder.buy_subscription');
+            // Build subscription details
+            $subscriptionDetails = [
+                'subscription_id' => $currentSubscription->subscription_id,
+                'status' => $currentSubscription->status,
+                'start_date' => $currentSubscription->start_date,
+                'end_date' => $currentSubscription->end_date,
+                'payment_gateway' => $currentSubscription->payment_gateway,
+            ];
         }
+        $currencySymbol = $currency === 'INR' ? '₹' : '$';
+
+        return view('faceFinder.manage-subscription', [
+            'currency' => $currency,
+            'currencySymbol' => $currencySymbol,
+            'planData' => $planData,
+            'subscriptionDetails' => $subscriptionDetails
+        ]);
     }
 
     private function getPlanData($currency = 'USD', $planId = null)

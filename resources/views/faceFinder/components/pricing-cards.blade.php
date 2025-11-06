@@ -1,10 +1,10 @@
 <!-- Pricing Section Component -->
-<form method="POST" action="{{ route('face_finder.subscribe_plan') }}" class="mb-8 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-lg p-8" x-data="pricingData()">
+<form method="POST" action="{{ route('face_finder.subscribe_plan') }}" class="mb-8 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-lg p-8" x-data="pricingData()" @submit="confirmSubscription($event)">
     @csrf
     <!-- Header -->
     <div class="text-center mb-6">
-        <h2 class="text-2xl font-bold text-slate-900 mb-2">Choose your plan</h2>
-        <p class="text-slate-600 text-sm mb-5">Get the right plan for your business. Plans can be upgraded in the future.</p>
+        <h2 class="text-2xl font-bold text-slate-900 mb-2">{{ userSubscriptionActivated() ? 'Upgrade Plan' : 'Choose your plan' }}</h2>
+        <p class="text-slate-600 text-sm mb-5">{{ userSubscriptionActivated() ? 'Upgrade to a higher plan to unlock more features.' : 'Get the right plan for your business. Plans can be upgraded in the future.' }}</p>
 
         <!-- Billing Toggle -->
         <div class="flex items-center justify-center mb-2">
@@ -31,9 +31,20 @@
         @endphp
 
         <template x-for="(plan, index) in getFilteredPlans()" :key="plan.id">
-        <div class="rounded-2xl bg-white border shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer relative"
-             :class="selectedPlan === plan.id ? 'border-green-500 border-2 ring-2 ring-green-200' : 'border-slate-200'"
-             @click="selectedPlan = plan.id">
+        <div class="rounded-2xl bg-white border shadow-lg p-6 transition-shadow relative"
+             :class="[
+                 currentPlanId && plan.id == currentPlanId ? 'border-emerald-500 border-2 ring-2 ring-emerald-200 cursor-not-allowed' :
+                 selectedPlan === plan.id ? 'border-green-500 border-2 ring-2 ring-green-200 cursor-pointer hover:shadow-xl' :
+                 'border-slate-200 cursor-pointer hover:shadow-xl'
+             ]"
+             @click="!(currentPlanId && plan.id == currentPlanId) && (selectedPlan = plan.id)">
+
+            <!-- Current Plan Badge -->
+            <template x-if="currentPlanId && plan.id == currentPlanId">
+                <div class="absolute -top-3 left-4 px-3 py-1 rounded-full bg-emerald-500 text-white text-xs font-semibold shadow-lg z-10">
+                    Current Plan
+                </div>
+            </template>
 
             <!-- Icon in Top Right Corner -->
             <template x-if="index === 0">
@@ -59,17 +70,20 @@
             </template>
 
             <!-- Radio Button and Title -->
-            <div class="flex items-center gap-2 mb-4">
+            <div class="flex items-center gap-2 mb-4" :class="currentPlanId && plan.id == currentPlanId ? 'mt-2' : ''">
                 <input type="radio" name="plan_id" :value="plan.id"
                        x-model="selectedPlan"
                        :id="'plan_' + plan.id"
-                       class="h-5 w-5 text-green-600 focus:ring-green-500 border-slate-300 cursor-pointer"
+                       :disabled="currentPlanId && plan.id == currentPlanId"
+                       :class="currentPlanId && plan.id == currentPlanId ? 'h-5 w-5 text-green-600 focus:ring-green-500 border-slate-300 cursor-not-allowed opacity-60' : 'h-5 w-5 text-green-600 focus:ring-green-500 border-slate-300 cursor-pointer'"
                        required>
-                <label :for="'plan_' + plan.id" class="text-lg font-bold text-slate-900 cursor-pointer" x-text="plan.name"></label>
+                <label :for="'plan_' + plan.id"
+                       :class="currentPlanId && plan.id == currentPlanId ? 'text-lg font-bold text-slate-900 cursor-not-allowed' : 'text-lg font-bold text-slate-900 cursor-pointer'"
+                       x-text="plan.name"></label>
             </div>
             <div class="mb-4">
                 <div class="flex items-baseline gap-1">
-                    <span class="text-3xl font-bold text-slate-900" x-text="currencySymbol + plan.price"></span>
+                    <span class="text-3xl font-bold text-slate-900" x-text="currencySymbol + parseFloat(plan.price).toFixed(2)"></span>
                     <span class="text-sm text-slate-600">/ <span x-text="billingCycle === 'monthly' ? 'month' : 'year'">month</span></span>
                 </div>
             </div>
@@ -100,8 +114,20 @@
     <!-- Submit Button -->
     <div class="mt-8 text-center">
         @auth
-            <button type="submit" class="px-8 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white text-base font-semibold hover:from-green-700 hover:to-emerald-700 transition-colors shadow-lg hover:shadow-xl">
-                Subscribe to Selected Plan
+            @if(userSubscribedButPaymentPending())
+                <div class="mb-4">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+                        <svg class="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <span>Please complete your pending payment before subscribing to a new plan.</span>
+                    </div>
+                </div>
+            @endif
+            <button type="submit"
+                    :disabled="paymentPending"
+                    :class="paymentPending ? 'px-8 py-3 rounded-xl bg-slate-400 text-white text-base font-semibold cursor-not-allowed shadow-lg opacity-60' : 'px-8 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white text-base font-semibold hover:from-green-700 hover:to-emerald-700 transition-colors shadow-lg hover:shadow-xl'">
+                {{ userSubscriptionActivated() ? 'Upgrade to Selected Plan' : 'Subscribe to Selected Plan' }}
             </button>
         @else
             <a href="{{ route('login') }}" class="inline-block px-8 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white text-base font-semibold hover:from-green-700 hover:to-emerald-700 transition-colors shadow-lg hover:shadow-xl">
@@ -118,6 +144,8 @@
             billingCycle: 'monthly',
             plans: @json($plans ?? []),
             currency: '{{ $currency }}',
+            currentPlanId: @json($currentPlanId ?? null),
+            paymentPending: @json($paymentPending ?? false),
 
             get currencySymbol() {
                 return this.currency === 'INR' ? '₹' : '$';
@@ -126,6 +154,17 @@
             getFilteredPlans() {
                 // Filter plans based on billing cycle
                 return this.plans.filter(plan => plan.billing_type === this.billingCycle);
+            },
+
+            confirmSubscription(event) {
+                const isUpgrade = @json(userSubscriptionActivated() ? true : false);
+                const message = isUpgrade
+                    ? 'Are you sure you want to upgrade to the selected plan?'
+                    : 'Are you sure you want to subscribe to the selected plan?';
+
+                if (!confirm(message)) {
+                    event.preventDefault();
+                }
             }
         };
     }
