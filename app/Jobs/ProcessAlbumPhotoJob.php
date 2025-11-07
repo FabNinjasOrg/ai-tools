@@ -60,12 +60,16 @@ class ProcessAlbumPhotoJob implements ShouldQueue
                 }
 
                 $filename = basename($photoName);
-                $photoS3Path = "{$s3Folder}/{$filename}";
+
+                // Append uniqid to filename
+                $uniqueFilename = pathinfo($filename, PATHINFO_FILENAME) . '_' . uniqid() . '.' . pathinfo($filename, PATHINFO_EXTENSION);
+
+                $photoS3Path = "{$s3Folder}/{$uniqueFilename}";
 
                 Storage::disk('s3')->put($photoS3Path, $content, 'private');
 
                 // Create temp file for embedding the photo
-                $tempPath = storage_path("app/tmp_embedding/{$this->userId}/{$this->uuid}/{$filename}");
+                $tempPath = storage_path("app/tmp_embedding/{$this->userId}/{$this->uuid}/{$uniqueFilename}");
                 if (!is_dir(dirname($tempPath))) mkdir(dirname($tempPath), 0775, true);
                 file_put_contents($tempPath, $content);
 
@@ -73,7 +77,7 @@ class ProcessAlbumPhotoJob implements ShouldQueue
 
                 $toInsert[] = [
                     'album_id' => $this->albumId,
-                    'filename' => $filename,
+                    'filename' => $uniqueFilename,
                     'path' => $photoS3Path,
                     'size_bytes' => strlen($content),
                     'embedding_json' => $embeddingJson ?? null,

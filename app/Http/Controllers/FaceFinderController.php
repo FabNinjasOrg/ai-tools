@@ -10,11 +10,13 @@ use App\Models\SubscriptionPlan;
 use App\Models\SubscriptionPlanPrice;
 use App\Jobs\PrepareMatchedPhotosZip;
 use App\Jobs\ProcessAlbumPhotoJob;
+use App\Jobs\ProcessDirectPhotoUploadJob;
 use App\Services\CalculateUserStorageService;
 use Illuminate\Http\Request;
 use Auth;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Bus\Batch;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -873,6 +875,97 @@ class FaceFinderController extends Controller
             'amount' => $price ? $price->$priceField : null,
             'billing_type' => str_contains(strtolower($plan->name), 'monthly') ? 'monthly' : 'yearly',
         ];
+    }
+
+    public function uploadPhotosToAlbum(string $uuid, Request $request)
+    {
+        $validated = $request->validate([
+            'photos' => 'required|array|min:1|max:10',
+            'photos.*' => 'required|image|mimes:png,jpg,jpeg,webp',
+        ], [
+            'photos.required' => 'Please select at least one photo to upload.',
+            'photos.max' => 'You can upload a maximum of 10 photos at once.',
+            'photos.*.image' => 'All files must be valid images.',
+            'photos.*.mimes' => 'Photos must be in PNG, JPG, JPEG, or WEBP format.',
+        ]);
+
+        $photos = $request->file('photos');
+        $album = Album::query()->where('uuid', $uuid)->firstOrFail();
+
+        // Check user storage limit before uploading
+        if(isUserStorageFull()){
+            return redirect()->back()->withErrors('Your storage limit has been reached. Please upgrade your subscription to upload more photos. Or delete existing albums to free up space.');
+        }
+
+        // Prepare photo data with base64 encoding for queue serialization
+        $photoData = [];
+        foreach($photos as $photo){
+            $photoData[] = [
+                'filename' => $photo->getClientOriginalName(),
+                'content' => base64_encode(file_get_contents($photo->getRealPath())),
+                'size' => $photo->getSize(),
+            ];
+        }
+
+        // Batch photos into groups of 10 and dispatch jobs
+        foreach (array_chunk($photoData, 10) as $photoBatch) {
+            ProcessDirectPhotoUploadJob::dispatch($album->id, $photoBatch)->onQueue('high');
+        }
+
+        return redirect()->back()->with('success', 'Photos are being uploaded, Please wait for a few minutes. Once uploaded, photos will be visible here.');
+    }
+
+    public function bulkDeletePhotos(string $uuid, Request $request)
+    {
+        $album = Album::query()->where('uuid', $uuid)->where('user_id', auth()->id())->firstOrFail();
+
+        $validated = $request->validate([
+            'photo_ids' => 'required|string',
+        ]);
+
+        try {
+            $photoIds = json_decode($validated['photo_ids'], true);
+
+            if (!is_array($photoIds) || empty($photoIds)) {
+                return redirect()->back()->withErrors('No photos selected for deletion.');
+            }
+
+            $photos = Photo::query()
+                ->where('album_id', $album->id)
+                ->whereIn('id', $photoIds)
+                ->get();
+
+            if ($photos->isEmpty()) {
+                return redirect()->back()->withErrors('No valid photos found to delete.');
+            }
+
+            $s3 = Storage::disk('s3');
+            $deletedCount = 0;
+
+            foreach ($photos as $photo) {
+                try {
+                    // Delete from S3
+                    if ($s3->exists($photo->path)) {
+                        $s3->delete($photo->path);
+                    }
+
+                    // Delete from database
+                    $photo->delete();
+                    $deletedCount++;
+                } catch (\Throwable $e) {
+                    Log::error('Failed to delete photo', [
+                        'photo_id' => $photo->id,
+                        'error' => $e->getMessage()
+                    ]);
+                    continue;
+                }
+            }
+
+            return redirect()->back()->with('success', "Successfully deleted {$deletedCount} photo(s).");
+        } catch (\Throwable $e) {
+            Log::error('Bulk delete photos error', ['error' => $e->getMessage()]);
+            return redirect()->back()->withErrors('Failed to delete photos. Please try again.');
+        }
     }
 
 }

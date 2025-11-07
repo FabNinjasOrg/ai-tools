@@ -128,7 +128,7 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <a href="{{ route('face_finder.buy_subscription') }}"
-                           class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-colors inline-flex items-center gap-2 shadow-md hover:shadow-lg">
+                           class="px-4 py-2 rounded-xl inline-flex items-center gap-2 transition-all {{ request()->routeIs('face_finder.buy_subscription') ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md' : 'border border-slate-300 text-slate-700 hover:bg-slate-50' }}">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                             </svg>
