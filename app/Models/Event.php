@@ -6,10 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Album extends Model
+class Event extends Model
 {
+    protected $table = 'events';
+
     protected $fillable = [
-        'user_id', 'uuid', 'name', 'zip_filename', 'zip_path', 'zip_size_bytes', 'photos_count', 'public_url', 'upload_status',
+        'user_id', 'uuid', 'name', 'zip_filename', 'zip_path', 'zip_size_bytes', 'photos_count', 'public_url', 'uploader_url', 'upload_status',
     ];
 
     public function photos(): HasMany

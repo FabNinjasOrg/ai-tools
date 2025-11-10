@@ -27,7 +27,7 @@
                                     </svg>
                                 </div>
                                 <div>
-                                    <span class="font-semibold">Single Album</span>
+                                    <span class="font-semibold">Single Event</span>
                                     <p class="text-xs text-amber-700 mt-0.5">Only one album creation</p>
                                 </div>
                             </div>

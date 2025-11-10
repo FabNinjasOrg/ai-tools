@@ -15,7 +15,7 @@ class EmailVerificationPromptController extends Controller
     public function __invoke(Request $request): RedirectResponse|View
     {
         return $request->user()->hasVerifiedEmail()
-                    ? redirect()->intended(route('face_finder.upload_album'))
+                    ? redirect()->intended(route('face_finder.upload_photos'))
                     : view('auth.verify-email');
     }
 }

@@ -15,7 +15,7 @@
             </div>
         </div>
     @else
-        <div x-data="albumPage('{{ $uuid }}')" x-init="init()" x-cloak class="max-w-7xl mx-auto px-6 py-12">
+        <div x-data="eventPage('{{ $uuid }}')" x-init="init()" x-cloak class="max-w-7xl mx-auto px-6 py-12">
             <div class="mb-4">
                 <template x-if="successMessage">
                     <div class="w-full">
@@ -360,7 +360,7 @@
     <!-- libphonenumber CDN -->
     <script src="https://cdn.jsdelivr.net/npm/libphonenumber-js@1.10.58/bundle/libphonenumber-min.js"></script>
     <script>
-        function albumPage(uuid) {
+        function eventPage(uuid) {
             return {
                 uuid,
                 showUnlockStep: false,

@@ -28,7 +28,7 @@ test('email can be verified', function () {
 
     Event::assertDispatched(Verified::class);
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
-    $response->assertRedirect(route('face_finder.upload_album').'?verified=1');
+    $response->assertRedirect(route('face_finder.upload_photos').'?verified=1');
 });
 
 test('email is not verified with invalid hash', function () {

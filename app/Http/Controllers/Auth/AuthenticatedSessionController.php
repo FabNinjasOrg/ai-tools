@@ -28,7 +28,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('face_finder.upload_album'));
+        return redirect()->intended(route('face_finder.upload_photos'));
     }
 
     /**

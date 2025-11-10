@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('albums', function (Blueprint $table) {
+        Schema::table('events', function (Blueprint $table) {
             $table->enum('upload_status', ['inprogress', 'fail', 'completed'])->default('inprogress')->index()->after('public_url');
         });
     }
@@ -21,7 +21,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('albums', function (Blueprint $table) {
+        Schema::table('events', function (Blueprint $table) {
             $table->dropColumn('upload_status');
         });
     }

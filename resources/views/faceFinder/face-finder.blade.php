@@ -1,6 +1,6 @@
 @extends('faceFinder.layout.sidebar-layout')
 
-@section('page-title', 'Upload Album')
+@section('page-title', 'Upload Photos')
 
 @section('content')
     <div class="max-w-7xl mx-auto px-6">
@@ -31,8 +31,8 @@
                                     </svg>
                                 </div>
                                 <div>
-                                    <span class="font-semibold">Single Album</span>
-                                    <p class="text-xs text-amber-700 mt-0.5">Only one album creation</p>
+                                    <span class="font-semibold">Single Event</span>
+                                    <p class="text-xs text-amber-700 mt-0.5">Only one event creation</p>
                                 </div>
                             </div>
                             <div class="flex items-start gap-2 text-sm text-amber-800">
@@ -43,7 +43,7 @@
                                 </div>
                                 <div>
                                     <span class="font-semibold">10 Images Allowed</span>
-                                    <p class="text-xs text-amber-700 mt-0.5">Maximum photos per album</p>
+                                    <p class="text-xs text-amber-700 mt-0.5">Maximum photos per event</p>
                                 </div>
                             </div>
                             <div class="flex items-start gap-2 text-sm text-amber-800">
@@ -85,7 +85,7 @@
             </div>
         @endif
 
-        <div x-data="uploadAlbumApp()" x-cloak>
+        <div x-data="manageUploadPhotos()" x-cloak>
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm">
                     <div class="p-5 border-b border-slate-200 flex items-center justify-between">
                         <div class="flex items-center gap-3">
@@ -97,54 +97,19 @@
                             </div>
                         </div>
                     </div>
-                    <div class="p-5 space-y-4">
-                        <input x-ref="zipInput" type="file" accept=".zip" @change="handleZipSelected($event)"
-                            class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white" />
-                        <div class="text-[12px] text-slate-500">Max 1 GB. Upload a ZIP file containing photos (png, jpg, jpeg, webp).</div>
+                    <div class="p-5">
+                        <!-- Uppy Dashboard Container -->
+                        <div x-ref="uppyContainer"></div>
 
-                        <template x-if="fileErrorMessage">
-                            <div class="text-[12px] text-red-600" x-text="fileErrorMessage"></div>
-                        </template>
-
-                        <template x-if="selectedZip">
-                            <div class="border border-slate-200 rounded-xl overflow-hidden">
-                                <div class="flex items-center justify-between px-4 py-2 bg-slate-50 rounded-xl">
-                                    <div class="flex items-center gap-4 min-w-0">
-                                        <div
-                                            class="h-8 w-8 rounded-lg bg-slate-200 inline-flex items-center justify-center shrink-0">
-                                            🗜️</div>
-                                        <div class="min-w-0">
-                                            <div class="text-sm font-medium text-slate-800 truncate"
-                                                x-text="selectedZip.name"></div>
-                                            <div class="text-[12px] text-slate-500"
-                                                x-text="formatFileSize(selectedZip.size)"></div>
-                                        </div>
-                                    </div>
-                                    <button class="text-slate-500 hover:text-red-600 ml-2"
-                                        @click="clearSelectedZip()">Remove</button>
-                                </div>
-                            </div>
-                        </template>
-
-                        <div class="flex items-center justify-end gap-3">
-                            <button type="button" @click="resetForm()" :disabled="isBusy"
-                                class="px-4 py-2 rounded-xl transition-colors"
-                                :class="isBusy ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed' :
-                                    'border border-slate-300 text-slate-700 hover:bg-slate-50'">Reset</button>
-                            <button type="button" @click="proceedAlbum()" :disabled="isBusy || !canProceed"
-                                class="px-5 py-2.5 rounded-xl font-medium inline-flex items-center gap-2 transition-colors disabled:cursor-not-allowed"
-                                :class="(isBusy || !canProceed) ? 'bg-slate-200 text-slate-500' :
-                                'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700'">
-                                <svg x-cloak x-show="!isBusy" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5"
+                        <!-- Upload Button -->
+                        <div class="mt-4 flex items-center justify-end">
+                            <button type="button" @click="proceedPhotos()"
+                                class="px-6 py-3 rounded-xl font-semibold inline-flex items-center gap-2 transition-all bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 shadow-md hover:shadow-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5"
                                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M12 19V5m0 0l-5 5m5-5l5 5" />
                                 </svg>
-                                <svg x-cloak x-show="isBusy" class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none"
-                                    stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10" class="opacity-25" />
-                                    <path d="M4 12a8 8 0 018-8" class="opacity-75" />
-                                </svg>
-                                <span x-text="isBusy ? 'Processing…' : 'Proceed'"></span>
+                                <span>Upload Event</span>
                             </button>
                         </div>
                     </div>
@@ -156,79 +121,61 @@
 
 @section('scripts')
     <script>
-        function uploadAlbumApp() {
+        function manageUploadPhotos() {
+            let uppyManager = null;
+
             return {
-                selectedZip: null,
-                fileErrorMessage: '',
-                canProceed: false,
-                isBusy: false,
-                maxBytes: 1024 * 1024 * 1024, // 1 GB
-
-                handleZipSelected(event) {
-                    const file = (event.target.files && event.target.files[0]) ? event.target.files[0] : null;
-                    this.clearMessages();
-                    this.canProceed = false;
-                    this.selectedZip = null;
-
-                    if (!file) return;
-
-                    // Basic validation only - server will handle the rest
-                    if (!/\.zip$/i.test(file.name)) {
-                        this.fileErrorMessage = 'Only .zip files are allowed.';
-                        if (this.$refs.zipInput) this.$refs.zipInput.value = '';
-                        return;
-                    }
-
-                    if (file.size > this.maxBytes) {
-                        this.fileErrorMessage = 'ZIP too large. Maximum allowed size is 1 GB.';
-                        if (this.$refs.zipInput) this.$refs.zipInput.value = '';
-                        return;
-                    }
-
-                    // File passed basic checks, allow proceed
-                    this.selectedZip = file;
-                    this.canProceed = true;
-                },
-
-                clearSelectedZip() {
-                    this.selectedZip = null;
-                    if (this.$refs.zipInput) this.$refs.zipInput.value = '';
-                    this.clearMessages();
-                    this.canProceed = false;
-                },
-
-                resetForm() {
-                    this.selectedZip = null;
-                    this.clearMessages();
-                    this.canProceed = false;
-                    this.isBusy = false;
-                    this.$nextTick(() => {
-                        if (this.$refs.zipInput) this.$refs.zipInput.value = '';
+                init() {
+                    const self = this;
+                    uppyManager = new window.UppyUploadManager({
+                        container: this.$refs.uppyContainer,
+                        inline: true,
+                        hideUploadButton: true,
+                        onError: (message) => {
+                            self.$store.messages.showError(message);
+                        }
                     });
                 },
 
-                clearMessages() {
-                    this.fileErrorMessage = '';
+                async proceedPhotos() {
+                    if (!uppyManager) return;
+
+                    const files = uppyManager.getFiles();
+                    if (files.length === 0) {
+                        this.$store.messages.showError('Please select files to upload.');
+                        return;
+                    }
+
                     this.$store.messages.clear();
-                },
-
-                formatFileSize(bytes) {
-                    if (bytes < 1024) return bytes + ' B';
-                    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-                    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
-                },
-
-                async proceedAlbum() {
-                    if (!this.canProceed || !this.selectedZip) return;
-                    this.isBusy = true;
-                    this.clearMessages();
 
                     try {
                         const form = new FormData();
-                        form.append('zip', this.selectedZip);
-                        form.append('name', this.selectedZip.name.replace(/\.zip$/i, ''));
 
-                        const res = await fetch("{{ route('face_finder.albums.store') }}", {
+                        // Separate zip files and photo files
+                        files.forEach((file) => {
+                            if (!file) return;
+
+                            let fileData = file.data;
+
+                            if (!fileData && file instanceof File) {
+                                fileData = file;
+                            }
+
+                            if (fileData) {
+                                const fileName = file.name || 'file';
+                                const fileExtension = fileName.toLowerCase().split('.').pop();
+
+                                // Check if it's a zip file
+                                if (fileExtension === 'zip') {
+                                    form.append('zips[]', fileData, fileName);
+                                } else {
+                                    // It's a photo file
+                                    form.append('photos[]', fileData, fileName);
+                                }
+                            }
+                        });
+
+                        const res = await fetch("{{ route('face_finder.events.store') }}", {
                             method: 'POST',
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest',
@@ -244,27 +191,25 @@
 
                         const data = await res.json();
                         if (data && data.album) {
-                            this.$store.messages.showSuccess(`Album "${data.album.name || ''}" uploaded successfully! Processing photos...`, 0);
+                            this.$store.messages.showSuccess('Photos uploaded successfully! Processing photos...', 0);
 
-                            // Store upload info for status tracking on albums page
+                            // Store upload status for tracking
                             if (data.album.uuid) {
-                                localStorage.setItem('ff_uploading_album', JSON.stringify({
+                                localStorage.setItem('ff_uploading_event', JSON.stringify({
                                     uuid: data.album.uuid,
                                     name: data.album.name || ''
                                 }));
                             }
 
-                            // Redirect to albums page after 2 seconds
                             setTimeout(() => {
-                                window.location.href = "{{ route('face_finder.albums.index') }}";
+                                window.location.href = "{{ route('face_finder.events.index') }}";
                             }, 2000);
                         }
 
-                        this.resetForm();
+                        // Reset uppy for next upload
+                        uppyManager.reset();
                     } catch (e) {
                         this.$store.messages.showError(e.message || 'Something went wrong.');
-                    } finally {
-                        this.isBusy = false;
                     }
                 }
             }

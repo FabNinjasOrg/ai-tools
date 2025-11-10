@@ -15,7 +15,7 @@ class ProcessAlbumPhotoJob implements ShouldQueue
 {
     use Queueable, Batchable;
 
-    public int $albumId;
+    public int $eventId;
     public int $userId;
     public string $uuid;
     public array $photoEntries;
@@ -27,9 +27,9 @@ class ProcessAlbumPhotoJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct($albumId, $userId, $uuid, array $photoEntries, string $zipPath)
+    public function __construct($eventId, $userId, $uuid, array $photoEntries, string $zipPath)
     {
-        $this->albumId = $albumId;
+        $this->eventId = $eventId;
         $this->userId = $userId;
         $this->uuid = $uuid;
         $this->photoEntries = $photoEntries;
@@ -45,7 +45,7 @@ class ProcessAlbumPhotoJob implements ShouldQueue
         $zip = new ZipArchive();
 
         if ($zip->open($this->zipPath) !== true) {
-            Log::error("Failed to open ZIP for album {$this->albumId}");
+            Log::error("Failed to open ZIP for event {$this->eventId}");
             return;
         }
 
@@ -76,7 +76,7 @@ class ProcessAlbumPhotoJob implements ShouldQueue
                 $embeddingJson = $this->EmbeddingTheImage($tempPath);
 
                 $toInsert[] = [
-                    'album_id' => $this->albumId,
+                    'event_id' => $this->eventId,
                     'filename' => $uniqueFilename,
                     'path' => $photoS3Path,
                     'size_bytes' => strlen($content),
@@ -88,7 +88,7 @@ class ProcessAlbumPhotoJob implements ShouldQueue
                 @unlink($tempPath);
             } catch (\Throwable $e) {
                 Log::error("Failed processing photo: {$photoName}", [
-                    'album' => $this->albumId,
+                    'event_id' => $this->eventId,
                     'error' => $e->getMessage()
                 ]);
                 // Continue gracefully don’t fail the job

@@ -53,7 +53,7 @@ class User extends Authenticatable
 
     public function albums(): HasMany
     {
-        return $this->hasMany(Album::class);
+        return $this->hasMany(Event::class);
     }
 
     public function subscriptions(): HasMany

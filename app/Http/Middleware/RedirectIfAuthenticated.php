@@ -20,7 +20,7 @@ class RedirectIfAuthenticated
 
         foreach ($guards as $guard) {
             if (auth()->guard($guard)->check()) {
-                return redirect()->route('face_finder.upload_album');
+                return redirect()->route('face_finder.upload_photos');
             }
         }
 

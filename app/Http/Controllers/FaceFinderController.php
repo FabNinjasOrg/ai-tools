@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Album;
+use App\Models\Event;
 use App\Models\Photo;
 use App\Models\OtpVerificationAttempt;
 use App\Models\User;
@@ -35,7 +35,7 @@ class FaceFinderController extends Controller
     public function faceFinder()
     {
         if (Auth::check()) {
-            return redirect()->route('face_finder.upload_album');
+            return redirect()->route('face_finder.upload_photos');
         }
         return view('faceFinder.home');
     }
@@ -52,7 +52,7 @@ class FaceFinderController extends Controller
         return view('faceFinder.pricing', compact('plans', 'currency'));
     }
 
-    public function uploadAlbumPage()
+    public function uploadPhotosPage()
     {
         return view('faceFinder.face-finder');
     }
@@ -84,23 +84,23 @@ class FaceFinderController extends Controller
 
     public function show(string $uuid)
     {
-        $album = Album::query()->where('uuid', $uuid)->first();
+        $event = Event::query()->where('uuid', $uuid)->first();
         $attemptTotal = 0;
         $attemptUniquePhones = 0;
         $noMatchCount = 0;
 
-        if ($album) {
-            $attemptTotal = $album->otpAttempts()->count();
+        if ($event) {
+            $attemptTotal = $event->otpAttempts()->count();
 
-            $attemptUniquePhones = $album->otpAttempts()
+            $attemptUniquePhones = $event->otpAttempts()
                 ->whereNotNull('phone_number')
                 ->distinct('phone_number')
                 ->count('phone_number');
 
-            $noMatchCount =  $album->otpAttempts()->where('matched_found_photos', 0)->count();
+            $noMatchCount =  $event->otpAttempts()->where('matched_found_photos', 0)->count();
         }
 
-        return view('faceFinder.album', [
+        return view('faceFinder.event', [
             'uuid' => $uuid,
             'attemptTotal' => $attemptTotal,
             'attemptUniquePhones' => $attemptUniquePhones,
@@ -110,187 +110,342 @@ class FaceFinderController extends Controller
 
     public function index(Request $request)
     {
-        $albums = Album::query()
+        return view('faceFinder.events-list');
+    }
+
+    public function loadAlbums(Request $request)
+    {
+        $events = Event::query()
             ->where('user_id', auth()->id())
             ->where('upload_status', 'completed')
             ->withCount('photos')
             ->orderByDesc('created_at')
-            ->get(['id', 'uuid', 'name', 'zip_size_bytes']);
+            ->get(['id', 'uuid', 'name']);
 
-        // If AJAX request, return JSON
-        if ($request->wantsJson() || $request->ajax()) {
-            return response()->json([
-                'albums' => $albums->map(function ($a) {
-                    return [
-                        'id' => $a->id,
-                        'uuid' => $a->uuid,
-                        'name' => $a->name,
-                        'size' => $a->zip_size_bytes,
-                        'count' => $a->photos_count,
-                    ];
-                })
-            ]);
-        }
-
-        // Otherwise, return the view
-        return view('faceFinder.albums-list');
+        return response()->json([
+            'albums' => $events->map(function ($a) {
+                return [
+                    'id' => $a->id,
+                    'uuid' => $a->uuid,
+                    'name' => $a->name,
+                    'count' => $a->photos_count,
+                ];
+            })
+        ]);
     }
 
     public function zipfileUploadStatus(string $uuid)
     {
-        $album = Album::query()->where('uuid', $uuid)->first();
+        $event = Event::query()->where('uuid', $uuid)->first();
 
-        if (!$album) {
-            return response()->json(['message' => 'Album not found'], 404);
+        if (!$event) {
+            return response()->json(['message' => 'Event not found'], 404);
         }
 
-        return response()->json(['upload_status' => $album->upload_status]);
+        return response()->json(['upload_status' => $event->upload_status]);
     }
 
-    public function storeZip(Request $request)
+    public function uploadPhotosForEvent(string $uuid, Request $request)
     {
-        $request->validate([
-            'zip' => 'required|file|mimes:zip|max:1024000', // ~1GB
-            'name' => 'nullable|string|max:255',
+        $validated = $request->validate([
+            'zips' => 'nullable|array',
+            'zips.*' => 'nullable|file|mimes:zip|max:1024000',
+            'photos' => 'nullable|array',
+            'photos.*' => 'nullable|file|image|mimes:png,jpg,jpeg,webp',
+        ], [
+            'photos.*.image' => 'All files must be valid images.',
+            'photos.*.mimes' => 'Photos must be in PNG, JPG, JPEG, or WEBP format.',
         ]);
 
-        $zipFile = $request->file('zip');
-        $originalName = $zipFile->getClientOriginalName();
-        $baseName = $request->input('name') ?: preg_replace('/\.zip$/i', '', $originalName);
+        $allZipFiles = $request->file('zips', []);
+        $allPhotoFiles = $request->file('photos', []);
 
-        $userId = auth()->id();
-
-        // Prevent a new upload if one is already in progress for this user
-        $hasInProgress = Album::query()
-            ->where('user_id', $userId)
-            ->where('upload_status', 'inprogress')
-            ->exists();
-        if ($hasInProgress) {
-            return response()->json([
-                'message' => 'An album upload is already in progress. Please wait until it completes and upload again.'
-            ], 422);
-        }
-
-        // Check if user is on trial and enforce limits
         if (!userHasAccessibility()) {
-            // Check single album limit
-            $existingAlbum = Album::where('user_id', $userId)->first();
-            if ($existingAlbum) {
+            $existingEvent = Event::where('user_id', auth()->id())->first();
+            if ($existingEvent) {
                 return response()->json([
-                    'message' => 'Trial users can create only one album. Please delete your existing album or upgrade your subscription.'
+                    'message' => 'Trial users can create only one event. Please delete your existing event or upgrade your subscription.'
                 ], 422);
             }
         }
 
-        // Check user storage limit
         if(isUserStorageFull()){
             return response()->json([
-                'message' => 'Your storage limit has been reached. Please upgrade your subscription to upload more photos. Or delete existing albums to free up space.'
+                'message' => 'Your storage limit has been reached. Please upgrade your subscription to upload more photos. Or delete existing events to free up space.'
             ], 422);
         }
 
-        $uuid = (string) Str::uuid();
-
-        // Extract ZIP temporarily locally
-        $localTempDir = storage_path("app/tmp_zip_extract/{$userId}/{$uuid}");
-        if (!is_dir($localTempDir)) {
-            mkdir($localTempDir, 0775, true);
+        // Validate all zip files first
+        $zipPhotoCount = 0;
+        if (!empty($allZipFiles)) {
+            $zipValidation = $this->validateZipFiles($allZipFiles);
+            if (!$zipValidation['valid']) {
+                return response()->json([
+                    'message' => $zipValidation['message']
+                ], 422);
+            }
+            $zipPhotoCount = $zipValidation['totalPhotoCount'] ?? 0;
         }
 
-        $localTempZipPath = $localTempDir . DIRECTORY_SEPARATOR . $originalName;
-        file_put_contents($localTempZipPath, file_get_contents($zipFile));
+        // Validate all photo files
+        $directPhotoCount = 0;
+        if (!empty($allPhotoFiles)) {
+            $directPhotoCount = count($allPhotoFiles);
 
-        $zip = new ZipArchive();
-        if ($zip->open($localTempZipPath) !== true) {
-            return response()->json(['message' => 'Failed to open ZIP.'], 422);
+            // Check trial user photo limit (combined total of zip photos + direct photos)
+            if (!userHasAccessibility() && ($zipPhotoCount + $directPhotoCount) > 10) {
+                return response()->json([
+                    'message' => "Trial users can upload up to 10 images only. You are trying to upload " . ($zipPhotoCount + $directPhotoCount) . " images total ({$zipPhotoCount} from ZIP files, {$directPhotoCount} direct photos). Upgrade your subscription for more."
+                ], 422);
+            }
         }
 
+        // Prepare all zips using validated data
+        $zipPreparations = [];
+        if (!empty($allZipFiles) && !empty($zipValidation['data'])) {
+            foreach ($zipValidation['data'] as $zipData) {
+                $preparation = $this->prepareZipForProcessing($uuid, $zipData);
+                if (!$preparation) {
+                    $this->cleanupZipFiles($zipValidation['data']);
+                    return response()->json([
+                        'message' => "Failed to process ZIP file: {$zipData['originalName']}. Please check the file and try again."
+                    ], 422);
+                }
+                $zipPreparations[] = $preparation;
+            }
+        }
+
+        // Zips prepared successfully, now dispatch all jobs
+        $zipResults = [];
+        foreach ($zipPreparations as $preparation) {
+            $result = $this->dispatchZipJobs($preparation);
+            if (!$result) {
+                $this->cleanupZipFiles($zipValidation['data']);
+                return response()->json([
+                    'message' => "Failed to dispatch jobs for ZIP file: {$preparation['originalName']}. Please try again."
+                ], 422);
+            }
+            $zipResults[] = $result;
+        }
+
+        // Process photos
+        $photoResult = null;
+        if (!empty($allPhotoFiles)) {
+            $photoResult = $this->uploadPhotosToAlbum($uuid, $allPhotoFiles);
+            if (!$photoResult) {
+                return response()->json([
+                    'message' => 'Failed to process photos. Please try again.'
+                ], 422);
+            }
+        }
+
+        // Return success response only if everything succeeded
+        $results = array_merge($zipResults, $photoResult ? [$photoResult] : []);
+
+        if (!empty($results)) {
+            return response()->json([
+                'message' => 'Files are being uploaded. Please wait for a few minutes.',
+                'results' => $results
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'No files to upload.'
+        ], 422);
+    }
+
+    private function validateZipFiles(array $zipFiles): array
+    {
         $allowedExtensions = ['png', 'jpg', 'jpeg', 'webp'];
+        $totalPhotoCount = 0;
+        $zipData = [];
+        $userId = auth()->id();
 
-        // collect photos from the zip file
-        $photos = [];
+        foreach ($zipFiles as $zipFile) {
+            $originalName = $zipFile->getClientOriginalName();
 
-        for ($entryIndex = 0; $entryIndex < $zip->numFiles; $entryIndex++) {
-            $zipEntryStat = $zip->statIndex($entryIndex);
-            $zipEntryName = $zipEntryStat['name'] ?? '';
+            // Create temporary directory for zip storage
+            $localTempDir = storage_path("app/tmp_zip_extract/{$userId}/" . uniqid());
+            if (!is_dir($localTempDir)) {
+                mkdir($localTempDir, 0775, true);
+            }
 
-            // Skip directories and unwanted files
-            if (str_ends_with($zipEntryName, '/')) continue;
+            // Save zip file to temp location
+            $localTempZipPath = $localTempDir . DIRECTORY_SEPARATOR . $originalName;
+            file_put_contents($localTempZipPath, file_get_contents($zipFile));
 
-            $zipEntryNameLower = strtolower($zipEntryName);
-            if (
-                str_starts_with($zipEntryNameLower, '__macosx/') ||
-                str_contains($zipEntryNameLower, '/._') ||
-                str_ends_with($zipEntryNameLower, '.ds_store')
-            ) continue;
+            $zip = new ZipArchive();
+            if ($zip->open($localTempZipPath) !== true) {
+                @unlink($localTempZipPath);
+                @rmdir($localTempDir);
 
-            $fileExtension = pathinfo($zipEntryNameLower, PATHINFO_EXTENSION);
-            if (!in_array($fileExtension, $allowedExtensions, true)) continue;
+                $this->cleanupZipFiles($zipData);
+                return [
+                    'valid' => false,
+                    'message' => "Failed to open ZIP file: {$originalName}",
+                    'data' => []
+                ];
+            }
 
-            $photos[] = $zipEntryName;
+            $photos = [];
+
+            // Scan zip file for valid images
+            for ($entryIndex = 0; $entryIndex < $zip->numFiles; $entryIndex++) {
+                $zipEntryStat = $zip->statIndex($entryIndex);
+                $zipEntryName = $zipEntryStat['name'] ?? '';
+
+                // Skip directories
+                if (str_ends_with($zipEntryName, '/')) {
+                    continue;
+                }
+
+                $zipEntryNameLower = strtolower($zipEntryName);
+
+                // Skip system files
+                if (
+                    str_starts_with($zipEntryNameLower, '__macosx/') ||
+                    str_contains($zipEntryNameLower, '/._') ||
+                    str_ends_with($zipEntryNameLower, '.ds_store')
+                ) {
+                    continue;
+                }
+
+                // Check file extension
+                $fileExtension = pathinfo($zipEntryNameLower, PATHINFO_EXTENSION);
+                if (!in_array($fileExtension, $allowedExtensions, true)) {
+                    $zip->close();
+                    @unlink($localTempZipPath);
+                    @rmdir($localTempDir);
+
+                    $this->cleanupZipFiles($zipData);
+                    return [
+                        'valid' => false,
+                        'message' => "ZIP file '{$originalName}' contains invalid file types. Only PNG, JPG, JPEG, and WEBP images are allowed.",
+                        'data' => []
+                    ];
+                }
+
+                $photos[] = $zipEntryName;
+            }
+
+            $zip->close();
+
+            // Validate ZIP contains photos
+            if (empty($photos)) {
+                @unlink($localTempZipPath);
+                @rmdir($localTempDir);
+
+                $this->cleanupZipFiles($zipData);
+                return [
+                    'valid' => false,
+                    'message' => "ZIP file '{$originalName}' contains no valid photos. Please ensure your ZIP contains PNG, JPG, JPEG, or WEBP images only.",
+                    'data' => []
+                ];
+            }
+
+            $totalPhotoCount += count($photos);
+
+            // Store zip file path and data for later use, not cleanup yet
+            $zipData[] = [
+                'file' => $zipFile,
+                'originalName' => $originalName,
+                'photoCount' => count($photos),
+                'photos' => $photos,
+                'tempZipPath' => $localTempZipPath,
+                'tempDir' => $localTempDir
+            ];
         }
 
-        $zip->close();
+        return [
+            'valid' => true,
+            'message' => 'All zip files validated successfully',
+            'data' => $zipData,
+            'totalPhotoCount' => $totalPhotoCount
+        ];
+    }
 
-        // Validate ZIP contains photos
-        if (empty($photos)) {
-            return response()->json([
-                'message' => 'ZIP file contains no valid photos. Please ensure your ZIP contains PNG, JPG, JPEG, or WEBP images only.'
-            ], 422);
+    private function prepareZipForProcessing($eventUuid, array $zipData): ?array
+    {
+        $userId = auth()->id();
+        $originalName = $zipData['originalName'];
+        $photos = $zipData['photos'];
+        $localTempZipPath = $zipData['tempZipPath'];
+        $localTempDir = $zipData['tempDir'];
+
+        // Get event record
+        $event = Event::where('uuid', $eventUuid)->first();
+        if (!$event) {
+            Log::error('Event not found', ['uuid' => $eventUuid]);
+            @unlink($localTempZipPath);
+            @rmdir($localTempDir);
+            return null;
         }
 
-        // Check trial user photo limit BEFORE uploading
-        if (!userHasAccessibility() && count($photos) > 10) {
-            return response()->json([
-                'message' => 'Trial users can upload up to 10 images only. Upgrade your subscription for more.'
-            ], 422);
-        }
+        return [
+            'eventId' => $event->id,
+            'userId' => $userId,
+            'eventUuid' => $eventUuid,
+            'originalName' => $originalName,
+            'photos' => $photos,
+            'tempZipPath' => $localTempZipPath,
+            'tempDir' => $localTempDir
+        ];
+    }
 
-        // Create album record with inprogress status
-        $album = Album::create([
-            'user_id' => $userId,
-            'uuid' => $uuid,
-            'name' => $baseName,
-            'zip_filename' => $originalName,
-            'zip_path' => ' ',
-            'zip_size_bytes' => $zipFile->getSize() ?: 0,
-            'photos_count' => count($photos),
-            'upload_status' => 'inprogress',
-        ]);
+    private function cleanupZipFiles(array $zipData): void
+    {
+        foreach ($zipData as $data) {
+            if (isset($data['tempZipPath'])) {
+                @unlink($data['tempZipPath']);
+            }
+            if (isset($data['tempDir'])) {
+                @rmdir($data['tempDir']);
+            }
+        }
+    }
+
+    private function dispatchZipJobs(array $preparation): ?array
+    {
+        $event = $preparation['event'];
+        $eventId = $preparation['eventId'];
+        $userId = $preparation['userId'];
+        $eventUuid = $preparation['eventUuid'];
+        $photos = $preparation['photos'];
+        $localTempZipPath = $preparation['tempZipPath'];
+        $localTempDir = $preparation['tempDir'];
 
         // Dispatch job to process photos
-        $batchName = "album_{$userId}_{$uuid}";
+        $batchName = "event_{$userId}_{$eventUuid}";
         $batchJobs = [];
 
         // Split into chunks, 100 photos per job
         foreach (array_chunk($photos, 100) as $chunk) {
-            $batchJobs[] = new ProcessAlbumPhotoJob($album->id, $userId, $uuid, $chunk, $localTempZipPath);
+            $batchJobs[] = new ProcessAlbumPhotoJob($eventId, $userId, $eventUuid, $chunk, $localTempZipPath);
         }
 
-        $albumId = $album->id;
         $batch = Bus::batch($batchJobs)
             ->name($batchName)
             ->onQueue('high')
-            ->then(function (Batch $batch) use ($albumId) {
+            ->then(function (Batch $batch) use ($eventId) {
                 try {
-                    $album = Album::find($albumId);
-                    if ($album) {
-                        $album->upload_status = 'completed';
-                        $album->save();
+                    $event = Event::find($eventId);
+                    if ($event) {
+                        $event->upload_status = 'completed';
+                        $event->save();
                     }
                 } catch (\Throwable $e) {
-                    Log::error('Failed to mark album completed', ['album_id' => $albumId, 'error' => $e->getMessage()]);
+                    Log::error('Failed to mark event completed', ['event_id' => $eventId, 'error' => $e->getMessage()]);
                 }
             })
-            ->catch(function (Batch $batch, \Throwable $e) use ($albumId) {
+            ->catch(function (Batch $batch, \Throwable $e) use ($eventId) {
                 try {
-                    $album = Album::find($albumId);
-                    if ($album) {
-                        $album->upload_status = 'fail';
-                        $album->save();
+                    $event = Event::find($eventId);
+                    if ($event) {
+                        $event->upload_status = 'fail';
+                        $event->save();
                     }
                 } catch (\Throwable $ex) {
-                    Log::error('Failed to mark album failed', ['album_id' => $albumId, 'error' => $ex->getMessage()]);
+                    Log::error('Failed to mark event failed', ['event_id' => $eventId, 'error' => $ex->getMessage()]);
                 }
             })
             ->finally(function () use ($localTempZipPath, $localTempDir) {
@@ -299,34 +454,66 @@ class FaceFinderController extends Controller
             })
             ->dispatch();
 
-        return response()->json([
+        return [
             'album' => [
-                'id' => $album->id,
-                'uuid' => $album->uuid,
-                'name' => $album->name,
-                'size' => $album->zip_size_bytes,
-                'count' => $album->photos_count,
+                'id' => $event->id,
+                'uuid' => $event->uuid,
+                'name' => $event->name,
+                'count' => $event->photos_count,
             ],
             'batch_id' => $batch->id,
-        ]);
+            'type' => 'zip'
+        ];
+    }
+
+
+    public function uploadPhotosToAlbum(string $eventUuid, $photos)
+    {
+        $album = Event::query()->where('uuid', $eventUuid)->first();
+
+        if (!$album) {
+            Log::error('Event not found for photo upload', ['uuid' => $eventUuid]);
+            return null;
+        }
+
+        // Prepare photo data with base64 encoding for queue serialization
+        $photoData = [];
+        foreach($photos as $photo){
+            $photoData[] = [
+                'filename' => $photo->getClientOriginalName(),
+                'content' => base64_encode(file_get_contents($photo->getRealPath())),
+                'size' => $photo->getSize(),
+            ];
+        }
+
+        // Batch photos into groups of 10 and dispatch jobs
+        foreach (array_chunk($photoData, 10) as $photoBatch) {
+            ProcessDirectPhotoUploadJob::dispatch($album->id, $photoBatch)->onQueue('high');
+        }
+
+        return [
+            'message' => 'Photos are being uploaded, Please wait for a few minutes. Once uploaded, photos will be visible here.',
+            'type' => 'photos',
+            'count' => count($photos)
+        ];
     }
 
     public function photos(string $uuid, Request $request)
     {
-        $album = Album::query()->where('uuid', $uuid)->firstOrFail(['id','uuid','name','public_url']);
+        $event = Event::query()->where('uuid', $uuid)->firstOrFail(['id','uuid','name','public_url']);
 
         $perPage = $request->query('per_page', 24);
 
         $photos = Photo::query()
-            ->where('album_id', $album->id)
+            ->where('event_id', $event->id)
             ->orderBy('id')
             ->paginate($perPage, ['id','filename','path','size_bytes']);
 
         return response()->json([
             'album' => [
-                'uuid' => $album->uuid,
-                'name' => $album->name,
-                'public_url' => $album->public_url,
+                'uuid' => $event->uuid,
+                'name' => $event->name,
+                'public_url' => $event->public_url,
             ],
             'photos' => $photos->map(function($p){
                 return [
@@ -347,81 +534,61 @@ class FaceFinderController extends Controller
 
     public function generatePublic(string $uuid)
     {
-        $album = Album::query()->where('uuid', $uuid)->firstOrFail();
-        if ($album->public_url) {
-            return response()->json(['public_url' => $album->public_url]);
+        $event = Event::query()->where('uuid', $uuid)->firstOrFail();
+        if ($event->public_url) {
+            return response()->json(['public_url' => $event->public_url]);
         }
 
-        // Generate URL /album/{name}/{uuid}
-        $slugName = Str::slug($album->name);
-        $publicUrl = route('face_finder.public.show', ['name' => $slugName, 'uuid' => $album->uuid]);
-        $album->public_url = $publicUrl;
-        $album->save();
+        // Generate URL /event/{name}/{uuid}
+        $slugName = Str::slug($event->name);
+        $publicUrl = route('face_finder.public.show', ['name' => $slugName, 'uuid' => $event->uuid]);
+        $event->public_url = $publicUrl;
+        $event->save();
 
         return response()->json(['public_url' => $publicUrl]);
     }
 
     public function deleteAlbum(string $uuid, Request $request)
     {
-        $album = Album::query()->where('uuid', $uuid)->firstOrFail();
+        $event = Event::query()->where('uuid', $uuid)->firstOrFail();
 
         try {
             $s3 = Storage::disk('s3');
-            $s3Folder = "FaceFinder/Albums/{$album->user_id}/{$album->uuid}";
+            $s3Folder = "FaceFinder/Albums/{$event->user_id}/{$event->uuid}";
 
-            // Delete all files in the album folder (ZIP + photos)
+            // Delete all files in the event folder (ZIP + photos)
             if ($s3->exists($s3Folder)) {
                 $s3->deleteDirectory($s3Folder);
             }
 
-            // Delete OTP attempts for this album
-            // OtpVerificationAttempt::query()->where('album_id', $album->id)->delete();
+            // Delete OTP attempts for this event
+            // OtpVerificationAttempt::query()->where('event_id', $event->id)->delete();
 
-            // Finally delete album
-            $album->delete();
+            // Finally delete event
+            $event->delete();
 
-            // Redirect back to upload albums page
-            return redirect()->route('face_finder.upload_album')->with('status', 'album_deleted');
+            // Redirect back to upload events page
+            return redirect()->route('face_finder.upload_photos')->with('status', 'event_deleted');
         } catch (\Throwable $e) {
-            Log::error('Failed to delete album', ['uuid' => $uuid, 'error' => $e->getMessage()]);
-            return back()->withErrors(['delete' => 'Failed to delete album']);
+            Log::error('Failed to delete event', ['uuid' => $uuid, 'error' => $e->getMessage()]);
+            return back()->withErrors(['delete' => 'Failed to delete event']);
         }
-    }
-
-    public function EmbeddingTheImage(string $path) {
-        $baseUrl = env('FASTAPI_BASE_URL', 'http://fastapi:8005');
-        $response = Http::attach('file', file_get_contents($path), basename($path))
-            ->timeout(60)
-            ->post($baseUrl.'/image-embedding/');
-
-        if ($response->failed()) {
-            logger("Embedding API failed for ". basename($path), ['response' => $response->body()]);
-            return;
-        }
-
-        // API returns faces: array of embeddings (or empty array)
-        $faces = $response->json('faces');
-
-        // Convert to JSON for DB storage (store per-photo faces)
-        $embeddingJson = json_encode($faces);
-
-        return $embeddingJson;
     }
 
     public function publicAlbumPage(string $name, string $uuid)
     {
-        $album = Album::query()->where('uuid', $uuid)->first(['name', 'user_id']);
-        $albumName = $album->name ?? '';
+        $event = Event::query()->where('uuid', $uuid)->first(['name', 'user_id']);
+        $eventName = $event->name ?? '';
 
-        return view('faceFinder.public-album', [
+        return view('faceFinder.public-event', [
             'uuid' => $uuid,
-            'albumName' => $albumName
+            'albumName' => $eventName
         ]);
     }
 
     public function logOtpAttempt(string $uuid, Request $request)
     {
-        $album = Album::query()->where('uuid', $uuid)->firstOrFail(['id','uuid']);
+        $event = Event::query()->where('uuid', $uuid)->firstOrFail(['id','uuid']);
 
         $data = $request->validate([
             'phone_number' => 'nullable|string|max:32',
@@ -431,9 +598,9 @@ class FaceFinderController extends Controller
             $phoneNumber = $data['phone_number'] ?? null;
             $sessionToken = Str::random(40);
 
-            // Check if there's already an entry for this phone number and album
+            // Check if there's already an entry for this phone number and event
             $existingAttempt = OtpVerificationAttempt::query()
-                ->where('album_id', $album->id)
+                ->where('event_id', $event->id)
                 ->where('phone_number', $phoneNumber)
                 ->first();
 
@@ -446,8 +613,8 @@ class FaceFinderController extends Controller
             } else {
                 // Create new attempt
                 OtpVerificationAttempt::create([
-                    'album_id' => $album->id,
-                    'album_uuid' => $album->uuid,
+                    'event_id' => $event->id,
+                    'album_uuid' => $event->uuid,
                     'phone_number' => $phoneNumber,
                     'ip_address' => $request->ip(),
                     'user_agent' => substr($request->userAgent() ?? '', 0, 512),
@@ -482,38 +649,38 @@ class FaceFinderController extends Controller
 
         $photo = $request->file('photo');
 
-        $albumUuid = $request->input('album_uuid');
+        $eventUuid = $request->input('album_uuid');
 
-        // Get album info
-        $album = Album::query()->where('uuid', $albumUuid)->firstOrFail();
+        // Get event info
+        $event = Event::query()->where('uuid', $eventUuid)->firstOrFail();
 
         try {
-            // Get all photos with embeddings from the album
-            $albumPhotos = Photo::query()
-                ->where('album_id', $album->id)
+            // Get all photos with embeddings from the event
+            $eventPhotos = Photo::query()
+                ->where('event_id', $event->id)
                 ->whereNotNull('embedding_json')
                 ->get(['id', 'filename', 'path', 'embedding_json']);
 
-            if ($albumPhotos->isEmpty()) {
+            if ($eventPhotos->isEmpty()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No photos with face data found in this album',
+                    'message' => 'No photos with face data found in this event',
                     'matched_photos' => []
                 ]);
             }
 
             // Prepare embeddings for FastAPI
-            $embeddings = $albumPhotos->map(function ($photo) {
+            $embeddings = $eventPhotos->map(function ($photo) {
                 return json_decode($photo->embedding_json, true);
             })->filter()->values()->toArray();
 
             if (empty($embeddings)) {
                 // Update state with no matches
-                $this->saveMatchedPhotosData($album, collect());
+                $this->saveMatchedPhotosData($event, collect());
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'No valid face embeddings found in album photos',
+                    'message' => 'No valid face embeddings found in event photos',
                     'matched_photos' => []
                 ]);
             }
@@ -538,7 +705,7 @@ class FaceFinderController extends Controller
 
             if (!$comparisonResult['match']) {
                 // Update state with no matches
-                $this->saveMatchedPhotosData($album, collect());
+                $this->saveMatchedPhotosData($event, collect());
 
                 return response()->json([
                     'success' => true,
@@ -554,7 +721,7 @@ class FaceFinderController extends Controller
             if (isset($comparisonResult['all_results']) && is_array($comparisonResult['all_results'])) {
                 foreach ($comparisonResult['all_results'] as $result) {
                     if (isset($result['index'])) {
-                        $matchPhoto = $albumPhotos->get($result['index']);
+                        $matchPhoto = $eventPhotos->get($result['index']);
                         if ($matchPhoto) {
                             $matchedPhotos->push([
                                 'id' => $matchPhoto->id,
@@ -568,7 +735,7 @@ class FaceFinderController extends Controller
             }
 
             // Save matched photo count and IDs if user is verified
-            $this->saveMatchedPhotosData($album, $matchedPhotos);
+            $this->saveMatchedPhotosData($event, $matchedPhotos);
 
             return response()->json([
                 'success' => true,
@@ -588,7 +755,7 @@ class FaceFinderController extends Controller
         }
     }
 
-    private function saveMatchedPhotosData($album, $matchedPhotos)
+    private function saveMatchedPhotosData($event, $matchedPhotos)
     {
         try {
             $sessionToken = request()->cookie('otp_session_token');
@@ -597,9 +764,9 @@ class FaceFinderController extends Controller
                 return; // No session token, skip saving
             }
 
-            // Find the existing attempt for this session and album
+            // Find the existing attempt for this session and event
             $existingAttempt = OtpVerificationAttempt::query()
-                ->where('album_id', $album->id)
+                ->where('event_id', $event->id)
                 ->where('session_token', $sessionToken)
                 ->first();
 
@@ -625,7 +792,7 @@ class FaceFinderController extends Controller
 
     public function checkOtpSession(string $uuid, Request $request)
     {
-        $album = Album::query()->where('uuid', $uuid)->firstOrFail(['id','uuid']);
+        $event = Event::query()->where('uuid', $uuid)->firstOrFail(['id','uuid']);
 
         $sessionToken = $request->cookie('otp_session_token');
 
@@ -634,7 +801,7 @@ class FaceFinderController extends Controller
         }
 
         $existingAttempt = OtpVerificationAttempt::query()
-            ->where('album_id', $album->id)
+            ->where('event_id', $event->id)
             ->where('session_token', $sessionToken)
             ->first();
 
@@ -649,7 +816,7 @@ class FaceFinderController extends Controller
 
     public function loadMatchedPhotos(string $uuid, Request $request)
     {
-        $album = Album::query()->where('uuid', $uuid)->firstOrFail(['id','uuid']);
+        $event = Event::query()->where('uuid', $uuid)->firstOrFail(['id','uuid']);
 
         $sessionToken = $request->cookie('otp_session_token');
 
@@ -663,7 +830,7 @@ class FaceFinderController extends Controller
         }
 
         $existingAttempt = OtpVerificationAttempt::query()
-            ->where('album_id', $album->id)
+            ->where('event_id', $event->id)
             ->where('session_token', $sessionToken)
             ->first();
 
@@ -721,7 +888,7 @@ class FaceFinderController extends Controller
 
     public function downloadMatchedPhotosZip(string $uuid, Request $request)
     {
-        $album = Album::query()->where('uuid', $uuid)->firstOrFail(['id','uuid']);
+        $event = Event::query()->where('uuid', $uuid)->firstOrFail(['id','uuid']);
 
         $data = $request->validate([
             'photo_ids' => 'required|array',
@@ -736,7 +903,7 @@ class FaceFinderController extends Controller
 
         // Verify session token
         $existingAttempt = OtpVerificationAttempt::query()
-            ->where('album_id', $album->id)
+            ->where('event_id', $event->id)
             ->where('session_token', $sessionToken)
             ->first();
 
@@ -877,47 +1044,9 @@ class FaceFinderController extends Controller
         ];
     }
 
-    public function uploadPhotosToAlbum(string $uuid, Request $request)
-    {
-        $validated = $request->validate([
-            'photos' => 'required|array|min:1|max:10',
-            'photos.*' => 'required|image|mimes:png,jpg,jpeg,webp',
-        ], [
-            'photos.required' => 'Please select at least one photo to upload.',
-            'photos.max' => 'You can upload a maximum of 10 photos at once.',
-            'photos.*.image' => 'All files must be valid images.',
-            'photos.*.mimes' => 'Photos must be in PNG, JPG, JPEG, or WEBP format.',
-        ]);
-
-        $photos = $request->file('photos');
-        $album = Album::query()->where('uuid', $uuid)->firstOrFail();
-
-        // Check user storage limit before uploading
-        if(isUserStorageFull()){
-            return redirect()->back()->withErrors('Your storage limit has been reached. Please upgrade your subscription to upload more photos. Or delete existing albums to free up space.');
-        }
-
-        // Prepare photo data with base64 encoding for queue serialization
-        $photoData = [];
-        foreach($photos as $photo){
-            $photoData[] = [
-                'filename' => $photo->getClientOriginalName(),
-                'content' => base64_encode(file_get_contents($photo->getRealPath())),
-                'size' => $photo->getSize(),
-            ];
-        }
-
-        // Batch photos into groups of 10 and dispatch jobs
-        foreach (array_chunk($photoData, 10) as $photoBatch) {
-            ProcessDirectPhotoUploadJob::dispatch($album->id, $photoBatch)->onQueue('high');
-        }
-
-        return redirect()->back()->with('success', 'Photos are being uploaded, Please wait for a few minutes. Once uploaded, photos will be visible here.');
-    }
-
     public function bulkDeletePhotos(string $uuid, Request $request)
     {
-        $album = Album::query()->where('uuid', $uuid)->where('user_id', auth()->id())->firstOrFail();
+        $event = Event::query()->where('uuid', $uuid)->where('user_id', auth()->id())->firstOrFail();
 
         $validated = $request->validate([
             'photo_ids' => 'required|string',
@@ -931,7 +1060,7 @@ class FaceFinderController extends Controller
             }
 
             $photos = Photo::query()
-                ->where('album_id', $album->id)
+                ->where('event_id', $event->id)
                 ->whereIn('id', $photoIds)
                 ->get();
 
@@ -966,6 +1095,66 @@ class FaceFinderController extends Controller
             Log::error('Bulk delete photos error', ['error' => $e->getMessage()]);
             return redirect()->back()->withErrors('Failed to delete photos. Please try again.');
         }
+    }
+
+    /**
+     * Handle uploads for route without uuid (legacy route)
+     * Gets or creates an event first, then processes uploads
+     */
+    public function storeZip(Request $request)
+    {
+        // Get user's first event or create a new one
+        $event = Event::where('user_id', auth()->id())->first();
+
+        if (!$event) {
+            // Create a new event with default name
+            $uuid = (string) Str::uuid();
+            $event = Event::create([
+                'user_id' => auth()->id(),
+                'uuid' => $uuid,
+                'name' => 'My Event',
+                'photos_count' => 0,
+                'upload_status' => 'completed',
+            ]);
+        }
+
+        // Redirect to the common upload function
+        return $this->uploadPhotosForEvent($event->uuid, $request);
+    }
+
+    public function eventsCreate(Request $request)
+    {
+        return view('faceFinder.events-create');
+    }
+
+    public function storeEvent(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $userId = auth()->id();
+        $uuid = (string) Str::uuid();
+
+        // Check if user is on trial and enforce limits
+        if (!userHasAccessibility()) {
+            $existingEvent = Event::where('user_id', $userId)->first();
+            if ($existingEvent) {
+                return redirect()->back()->withErrors([
+                    'name' => 'Trial users can create only one event. Please delete your existing event or upgrade your subscription.'
+                ]);
+            }
+        }
+
+        $event = Event::create([
+            'user_id' => $userId,
+            'uuid' => $uuid,
+            'name' => $validated['name'],
+            'photos_count' => 0,
+            'upload_status' => 'completed',
+        ]);
+
+        return redirect()->route('face_finder.events.show', ['uuid' => $event->uuid]);
     }
 
 }

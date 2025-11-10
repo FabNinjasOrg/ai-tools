@@ -8,11 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Photo extends Model
 {
     protected $fillable = [
-        'album_id', 'filename', 'path', 'size_bytes', 'embedding_json',
+        'event_id', 'filename', 'path', 'size_bytes', 'embedding_json',
     ];
 
     public function album(): BelongsTo
     {
-        return $this->belongsTo(Album::class);
+        return $this->belongsTo(Event::class);
     }
 }

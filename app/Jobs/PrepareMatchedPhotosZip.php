@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Album;
+use App\Models\Event;
 use App\Models\Photo;
 use App\Models\OtpVerificationAttempt;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -18,16 +18,16 @@ class PrepareMatchedPhotosZip implements ShouldQueue
     public $timeout = 300; // 5 minutes timeout
     public $tries = 3;
 
-    protected $albumUuid;
+    protected $eventUuid;
     protected $photoIds;
     protected $sessionToken;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(string $albumUuid, array $photoIds, string $sessionToken)
+    public function __construct(string $eventUuid, array $photoIds, string $sessionToken)
     {
-        $this->albumUuid = $albumUuid;
+        $this->eventUuid = $eventUuid;
         $this->photoIds = $photoIds;
         $this->sessionToken = $sessionToken;
     }
@@ -38,22 +38,22 @@ class PrepareMatchedPhotosZip implements ShouldQueue
     public function handle(): void
     {
         try {
-            $album = Album::query()->where('uuid', $this->albumUuid)->firstOrFail(['id','uuid','user_id']);
-            logger($album->toArray());
+            $event = Event::query()->where('uuid', $this->eventUuid)->firstOrFail(['id','uuid','user_id']);
+            logger($event->toArray());
             // Get photos
             $photos = Photo::query()
                 ->whereIn('id', $this->photoIds)
-                ->where('album_id', $album->id)
+                ->where('event_id', $event->id)
                 ->get(['id', 'filename', 'path']);
 
             if ($photos->isEmpty()) {
-                Log::error('No photos found for ZIP creation', ['album_uuid' => $this->albumUuid, 'photo_ids' => $this->photoIds]);
+                Log::error('No photos found for ZIP creation', ['event_uuid' => $this->eventUuid, 'photo_ids' => $this->photoIds]);
                 return;
             }
 
             // Create ZIP file
             $zip = new ZipArchive();
-            $zipFileName = "matched-photos-{$this->albumUuid}-" . time() . ".zip";
+            $zipFileName = "matched-photos-{$this->eventUuid}-" . time() . ".zip";
             $zipPath = storage_path("app/temp/{$zipFileName}");
 
             // Ensure temp directory exists
@@ -87,7 +87,7 @@ class PrepareMatchedPhotosZip implements ShouldQueue
             $zip->close();
 
             // Upload ZIP file to S3
-            $s3ZipPath = "FaceFinder/ZIPs/{$album->user_id}/{$this->albumUuid}/{$zipFileName}";
+            $s3ZipPath = "FaceFinder/ZIPs/{$event->user_id}/{$this->eventUuid}/{$zipFileName}";
             Storage::disk('s3')->put($s3ZipPath, file_get_contents($zipPath), 'private');
 
             // Generate temporary URL for S3 file
@@ -96,7 +96,7 @@ class PrepareMatchedPhotosZip implements ShouldQueue
             // Save S3 URL to OTP attempt table
             $otpAttempt = OtpVerificationAttempt::query()
                 ->where('session_token', $this->sessionToken)
-                ->where('album_uuid', $this->albumUuid)
+                ->where('album_uuid', $this->eventUuid)
                 ->first();
 
             if ($otpAttempt) {
@@ -109,7 +109,7 @@ class PrepareMatchedPhotosZip implements ShouldQueue
             @unlink($zipPath);
 
             Log::info('ZIP file created successfully', [
-                'album_uuid' => $this->albumUuid,
+                'event_uuid' => $this->eventUuid,
                 'zip_path' => $zipPath,
                 'photos_added' => $addedCount,
                 'total_photos' => $photos->count()
@@ -117,7 +117,7 @@ class PrepareMatchedPhotosZip implements ShouldQueue
 
         } catch (\Throwable $e) {
             Log::error('Failed to prepare ZIP file', [
-                'album_uuid' => $this->albumUuid,
+                'event_uuid' => $this->eventUuid,
                 'photo_ids' => $this->photoIds,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -132,7 +132,7 @@ class PrepareMatchedPhotosZip implements ShouldQueue
     public function failed(\Throwable $exception): void
     {
         Log::error('PrepareMatchedPhotosZip job failed', [
-            'album_uuid' => $this->albumUuid,
+            'event_uuid' => $this->eventUuid,
             'photo_ids' => $this->photoIds,
             'error' => $exception->getMessage()
         ]);

@@ -11,7 +11,7 @@ class OtpVerificationAttempt extends Model
     use HasFactory;
 
     protected $fillable = [
-        'album_id',
+        'event_id',
         'album_uuid',
         'phone_number',
         'ip_address',
@@ -25,7 +25,7 @@ class OtpVerificationAttempt extends Model
 
     public function album(): BelongsTo
     {
-        return $this->belongsTo(Album::class);
+        return $this->belongsTo(Event::class);
     }
 }
 

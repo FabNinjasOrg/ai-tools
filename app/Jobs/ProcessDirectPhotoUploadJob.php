@@ -8,13 +8,13 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\Photo;
-use App\Models\Album;
+use App\Models\Event;
 
 class ProcessDirectPhotoUploadJob implements ShouldQueue
 {
     use Queueable;
 
-    public int $albumId;
+    public int $eventId;
     public array $photos;
 
     public $tries = 3;
@@ -22,26 +22,26 @@ class ProcessDirectPhotoUploadJob implements ShouldQueue
 
     /**
      *
-     * @param int $albumId
+     * @param int $eventId
      * @param array $photos Array of photos with ['filename', 'content' (base64 encoded), 'size']
      */
-    public function __construct(int $albumId, array $photos)
+    public function __construct(int $eventId, array $photos)
     {
-        $this->albumId = $albumId;
+        $this->eventId = $eventId;
         $this->photos = $photos;
     }
 
     public function handle(): void
     {
-        $album = Album::find($this->albumId);
+        $event = Event::find($this->eventId);
 
-        if (!$album) {
-            Log::error("Album not found for photo upload job", ['album_id' => $this->albumId]);
+        if (!$event) {
+            Log::error("Event not found for photo upload job", ['event_id' => $this->eventId]);
             return;
         }
 
-        $userId = $album->user_id;
-        $uuid = $album->uuid;
+        $userId = $event->user_id;
+        $uuid = $event->uuid;
         $s3Folder = "FaceFinder/Albums/{$userId}/{$uuid}";
 
         $toInsert = [];
@@ -73,7 +73,7 @@ class ProcessDirectPhotoUploadJob implements ShouldQueue
 
                 // Prepare data for bulk insert
                 $toInsert[] = [
-                    'album_id' => $this->albumId,
+                    'event_id' => $this->eventId,
                     'filename' => $uniqueFilename,
                     'path' => $photoS3Path,
                     'size_bytes' => $photoSize,
@@ -87,7 +87,7 @@ class ProcessDirectPhotoUploadJob implements ShouldQueue
 
             } catch (\Throwable $e) {
                 Log::error("Failed processing photo in batch: {$photoData['filename']}", [
-                    'album_id' => $this->albumId,
+                    'event_id' => $this->eventId,
                     'error' => $e->getMessage()
                 ]);
                 // Continue with other photos
@@ -99,7 +99,7 @@ class ProcessDirectPhotoUploadJob implements ShouldQueue
         if (!empty($toInsert)) {
             Photo::insert($toInsert);
             Log::info("Successfully processed photo batch", [
-                'album_id' => $this->albumId,
+                'event_id' => $this->eventId,
                 'count' => count($toInsert)
             ]);
         }

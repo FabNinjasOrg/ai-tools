@@ -31,17 +31,24 @@ Route::prefix('face-finder')->group(function () {
     Route::get('/pricing', [FaceFinderController::class, 'pricing'])->name('face_finder.pricing');
 
     Route::middleware('auth')->group(function () {
-        Route::get('upload-album', [FaceFinderController::class, 'uploadAlbumPage'])->name('face_finder.upload_album');
+        Route::get('upload-photos', [FaceFinderController::class, 'uploadPhotosPage'])->name('face_finder.upload_photos');
         Route::post('update-country-code', [FaceFinderController::class, 'updateCountryCode'])->name('face_finder.update_country_code');
-        Route::get('albums', [FaceFinderController::class, 'index'])->name('face_finder.albums.index');
-        Route::post('albums', [FaceFinderController::class, 'storeZip'])->name('face_finder.albums.store');
-        Route::get('albums/{uuid}', [FaceFinderController::class, 'show'])->name('face_finder.albums.show');
-        Route::get('albums/{uuid}/photos', [FaceFinderController::class, 'photos'])->name('face_finder.albums.photos');
-        Route::post('albums/{uuid}/upload-photos', [FaceFinderController::class, 'uploadPhotosToAlbum'])->name('face_finder.albums.upload_photos');
-        Route::delete('albums/{uuid}/bulk-delete-photos', [FaceFinderController::class, 'bulkDeletePhotos'])->name('face_finder.albums.bulk_delete_photos');
-        Route::get('albums/{uuid}/upload-status', [FaceFinderController::class, 'zipfileUploadStatus'])->name('zipfileUploadStatus');
-        Route::post('albums/{uuid}/generate-public', [FaceFinderController::class, 'generatePublic'])->name('face_finder.albums.generate_public');
-        Route::delete('albums/{uuid}', [FaceFinderController::class, 'deleteAlbum'])->name('face_finder.albums.delete');
+
+        // Events routes
+        // IMPORTANT: Specific routes (like 'create') must come BEFORE parameterized routes (like '{uuid}')
+        Route::get('events', [FaceFinderController::class, 'index'])->name('face_finder.events.index');
+        Route::get('events/create', [FaceFinderController::class, 'eventsCreate'])->name('face_finder.events.create');
+        Route::get('load-events', [FaceFinderController::class, 'loadAlbums'])->name('face_finder.load_events');
+        Route::post('events/store-name', [FaceFinderController::class, 'storeEvent'])->name('face_finder.events.store_name');
+        Route::post('events', [FaceFinderController::class, 'storeZip'])->name('face_finder.events.store');
+        Route::get('events/{uuid}', [FaceFinderController::class, 'show'])->name('face_finder.events.show');
+        Route::get('events/{uuid}/photos', [FaceFinderController::class, 'photos'])->name('face_finder.events.photos');
+        Route::post('events/{uuid}/upload-photos', [FaceFinderController::class, 'uploadPhotosForEvent'])->name('face_finder.events.upload_photos');
+        // Route::post('events/{uuid}/upload-photos', [FaceFinderController::class, 'uploadPhotosToAlbum'])->name('face_finder.events.upload_photos');
+        Route::delete('events/{uuid}/bulk-delete-photos', [FaceFinderController::class, 'bulkDeletePhotos'])->name('face_finder.events.bulk_delete_photos');
+        Route::get('events/{uuid}/upload-status', [FaceFinderController::class, 'zipfileUploadStatus'])->name('eventUploadStatus');
+        Route::post('events/{uuid}/generate-public', [FaceFinderController::class, 'generatePublic'])->name('face_finder.events.generate_public');
+        Route::delete('events/{uuid}', [FaceFinderController::class, 'deleteAlbum'])->name('face_finder.events.delete');
         Route::get('buy-subscription', [FaceFinderController::class, 'buySubscription'])->name('face_finder.buy_subscription');
         Route::get('manage-subscription', [FaceFinderController::class, 'manageSubscription'])->name('face_finder.manage_subscription');
         Route::get('storage', [StorageController::class, 'index'])->name('face_finder.storage');

@@ -53,7 +53,7 @@ class GoogleAuthController extends Controller
             // Login the user
             Auth::login($user);
 
-            return redirect()->route('face_finder.upload_album');
+            return redirect()->route('face_finder.upload_photos');
         } catch (\Exception $e) {
             return redirect('/login')->with('error', 'Failed to login with Google: ' . $e->getMessage());
         }

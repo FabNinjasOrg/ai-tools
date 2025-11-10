@@ -1,20 +1,20 @@
 @extends('faceFinder.layout.sidebar-layout')
 
-@section('page-title', 'Album Details')
+@section('page-title', 'Event Details')
 
 @section('content')
-    <div x-data="albumPage('{{ $uuid }}')" x-init="init()" x-cloak class="max-w-7xl mx-auto px-6">
+    <div x-data="eventPage('{{ $uuid }}')" x-init="init()" x-cloak class="max-w-7xl mx-auto px-6">
         <div class="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
             <div class="flex items-center gap-3 text-xl md:text-xl">
-                <a href="{{ route('face_finder.albums.index') }}" class="text-slate-600 hover:text-green-600 transition-colors">
-                    Album
+                <a href="{{ route('face_finder.events.index') }}" class="text-slate-600 hover:text-green-600 transition-colors">
+                    Event
                 </a>
                 >
-                <h1 x-text="albumName"></h1>
+                <h1 x-text="eventName"></h1>
             </div>
             <div class="flex items-center gap-2">
-                <form action="{{ route('face_finder.albums.delete', ['uuid' => $uuid]) }}" method="POST"
-                    onsubmit="return confirm('Are you sure you want to delete this album? This cannot be undone.');">
+                <form action="{{ route('face_finder.events.delete', ['uuid' => $uuid]) }}" method="POST"
+                    onsubmit="return confirm('Are you sure you want to delete this event? This cannot be undone.');">
                     @csrf
                     @method('DELETE')
                     <button type="submit"
@@ -80,7 +80,7 @@
                     </div>
                     <div>
                         <h2 class="text-lg font-semibold text-slate-900">Public URL Analytics</h2>
-                        <p class="text-xs text-slate-500">Track how users interact with your shared album</p>
+                        <p class="text-xs text-slate-500">Track how users interact with your shared event</p>
                     </div>
                 </div>
             </div>
@@ -129,9 +129,12 @@
             </div>
         </div>
 
+        <!-- Uppy Modal Container -->
+        <div x-ref="uppyModalContainer"></div>
+
         <!-- Floating Upload Photos Button - Bottom Right Corner -->
         <div class="fixed bottom-6 right-6 z-50">
-            <button type="button" onclick="document.getElementById('photo-upload-input').click()"
+            <button type="button" @click="openUploadModal()"
                 class="h-14 w-14 rounded-full bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 inline-flex items-center justify-center shadow-lg hover:shadow-xl transition-all transform hover:scale-110"
                 title="Upload Photos">
                 <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -140,23 +143,11 @@
             </button>
         </div>
 
-        <!-- Hidden Upload Form -->
-        <form id="photo-upload-form" action="{{ route('face_finder.albums.upload_photos', ['uuid' => $uuid]) }}" method="POST" enctype="multipart/form-data" class="hidden">
-            @csrf
-            <input type="file"
-                   id="photo-upload-input"
-                   name="photos[]"
-                   multiple
-                   accept="image/png,image/jpg,image/jpeg,image/webp"
-                   onchange="document.getElementById('photo-upload-form').submit()"
-                   class="hidden">
-        </form>
-
         <!-- Bulk Delete Action Bar -->
         <div x-show="selectedPhotos.length > 0"
              class="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 bg-slate-900 text-white rounded-2xl shadow-2xl px-6 py-4 flex items-center gap-4">
             <span class="font-medium" x-text="`${selectedPhotos.length} photo(s) selected`"></span>
-            <form action="{{ route('face_finder.albums.bulk_delete_photos', ['uuid' => $uuid]) }}" method="POST"
+            <form action="{{ route('face_finder.events.bulk_delete_photos', ['uuid' => $uuid]) }}" method="POST"
                   onsubmit="return confirm('Are you sure you want to delete the selected photos? This cannot be undone.');">
                 @csrf
                 @method('DELETE')
@@ -175,9 +166,30 @@
             </button>
         </div>
 
-        <!-- Photos wrapped in a bordered card like the public link card -->
-        <div x-cloak class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-            <div class="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+		<div x-cloak class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+			<!-- Empty State -->
+			<template x-if="!loading && photos.length === 0">
+				<div class="w-full flex flex-col items-center justify-center text-center py-16">
+					<div class="h-20 w-20 rounded-2xl bg-slate-100 inline-flex items-center justify-center mb-4">
+						<svg class="h-10 w-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M3 7a2 2 0 012-2h3l2-2h4l2 2h3a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+							<path stroke-linecap="round" stroke-linejoin="round" d="M8 13l2.293 2.293a1 1 0 001.414 0L16 11" />
+						</svg>
+					</div>
+					<h3 class="text-lg font-semibold text-slate-900 mb-2">No photos for this event</h3>
+					<p class="text-slate-500 text-sm mb-6 max-w-md">Please upload photos to get started.</p>
+					<button type="button" @click="openUploadModal()"
+						class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-all inline-flex items-center gap-2 shadow-md hover:shadow-lg">
+						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+						</svg>
+						Upload Photos
+					</button>
+				</div>
+			</template>
+
+			<!-- Photos Grid -->
+			<div x-show="photos.length > 0" class="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                 <template x-for="photo in photos" :key="photo.id">
                     <div
                         class="group rounded-xl overflow-hidden border border-slate-200 bg-white w-full shadow-sm hover:shadow-md transition duration-200"
@@ -218,7 +230,7 @@
                 </template>
             </div>
 
-            <div x-cloak class="flex justify-center mt-6" x-show="hasMore">
+			<div x-cloak class="flex justify-center mt-6" x-show="hasMore">
                 <button @click="loadMore()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200"
                     :disabled="loading">
                     <span x-show="!loading">Load more</span>
@@ -232,12 +244,14 @@
 @section('scripts')
     @parent
     <script>
-        function albumPage(uuid) {
-            // Alpine component for album detail page
+        function eventPage(uuid) {
+            let uppyManager = null;
+
+            // Alpine component for event detail page
             return {
                 // state
                 uuid,
-                albumName: '',
+                eventName: '',
                 photos: [],
                 page: 0, // Start at 0, will be updated by pagination response
                 perPage: 24,
@@ -254,6 +268,95 @@
                     if (!this.publicUrl) {
                         await this.generatePublic();
                     }
+                    // Initialize Uppy
+                    this.initUppy();
+                },
+
+                initUppy() {
+                    if (!window.UppyUploadManager) {
+                        console.error('Uppy manager not loaded');
+                        return;
+                    }
+                    // Prevent double initialization
+                    if (uppyManager) {
+                        return;
+                    }
+
+                    uppyManager = new window.UppyUploadManager({
+                        container: this.$refs.uppyModalContainer,
+                        inline: false,
+                        onUpload: (files) => {
+                            this.uploadPhotos(files);
+                        },
+                        onError: (message) => {
+                            this.$store.messages.showError(message);
+                        }
+                    });
+                },
+
+                openUploadModal() {
+                    if (uppyManager) {
+                        uppyManager.openModal();
+                    }
+                },
+
+                async uploadPhotos(files) {
+                    if (!files || files.length === 0) {
+                        this.$store.messages.showError('Please select at least one photo to upload.');
+                        return;
+                    }
+
+                    const formData = new FormData();
+
+                    // Separate zip files and photo files
+                    files.forEach((file) => {
+                        if (!file) return;
+
+                        const fileName = file.name || 'file';
+                        const fileExtension = fileName.toLowerCase().split('.').pop();
+
+                        // Check if it's a zip file
+                        if (fileExtension === 'zip') {
+                            formData.append('zips[]', file.data, fileName);
+                        } else {
+                            // It's a photo file
+                            formData.append('photos[]', file.data, fileName);
+                        }
+                    });
+
+                    try {
+                        const response = await fetch('{{ route('face_finder.events.upload_photos', ['uuid' => $uuid]) }}', {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: formData
+                        });
+
+                        if (!response.ok) {
+                            const data = await response.json().catch(() => ({}));
+                            throw new Error(data.message || 'Upload failed');
+                        }
+
+                        const data = await response.json();
+                        this.$store.messages.showSuccess(data.message || 'Photos uploaded successfully. It will take some time to process them. Kindly, wait.');
+
+                        // Close modal and reset
+                        uppyManager.closeModal();
+                        uppyManager.reset();
+
+                        // Reload photos
+                        this.photos = [];
+                        this.page = 0;
+                        this.hasMore = true;
+                        await this.loadMore();
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                        this.$store.messages.showError(error.message || 'Failed to upload photos. Please try again.');
+
+                        uppyManager.reset();
+                    }
                 },
 
                 // actions
@@ -269,7 +372,7 @@
                         if (!response.ok) throw new Error('Failed to load photos');
 
                         const payload = await response.json();
-                        this.albumName = payload?.album?.name || this.albumName;
+                        this.eventName = payload?.album?.name || this.eventName;
                         if (payload?.album?.public_url) this.publicUrl = payload.album.public_url;
                         if (Array.isArray(payload.photos)) this.photos.push(...payload.photos);
 
@@ -290,7 +393,7 @@
                     this.loadingUrl = true;
                     try {
                         const endpoint =
-                            `{{ route('face_finder.albums.generate_public', ['uuid' => 'UUID_PLACEHOLDER']) }}`.replace(
+                            `{{ route('face_finder.events.generate_public', ['uuid' => 'UUID_PLACEHOLDER']) }}`.replace(
                                 'UUID_PLACEHOLDER', this.uuid);
                         const res = await fetch(endpoint, {
                             method: 'POST',
@@ -330,7 +433,7 @@
 
                 // helpers
                 getPhotosApiUrl() {
-                    const base = `{{ route('face_finder.albums.photos', ['uuid' => 'UUID_PLACEHOLDER']) }}`.replace(
+                    const base = `{{ route('face_finder.events.photos', ['uuid' => 'UUID_PLACEHOLDER']) }}`.replace(
                         'UUID_PLACEHOLDER', this.uuid);
                     const params = new URLSearchParams({
                         page: String(this.page + 1), // Next page for load more

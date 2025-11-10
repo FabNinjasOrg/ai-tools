@@ -54,6 +54,6 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('face_finder.upload_album'));
+        return redirect(route('face_finder.upload_photos'));
     }
 }

@@ -15,5 +15,5 @@ test('new users can register', function () {
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect(route('face_finder.upload_album'));
+    $response->assertRedirect(route('face_finder.upload_photos'));
 });

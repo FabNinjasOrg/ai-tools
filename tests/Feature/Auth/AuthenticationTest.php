@@ -17,7 +17,7 @@ test('users can authenticate using the login screen', function () {
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect(route('face_finder.upload_album',));
+    $response->assertRedirect(route('face_finder.upload_photos',));
 });
 
 test('users can not authenticate with invalid password', function () {

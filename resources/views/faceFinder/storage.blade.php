@@ -60,7 +60,7 @@
                             <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
-                            <span><strong>Storage Almost Full!</strong> You've used {{ number_format($percentageUsed, 1) }}% of your storage. Consider upgrading your plan or deleting some albums.</span>
+                            <span><strong>Storage Almost Full!</strong> You've used {{ number_format($percentageUsed, 1) }}% of your storage. Consider upgrading your plan or deleting some events.</span>
                         </div>
                     @elseif($percentageUsed >= 70)
                         <div class="w-full mt-6 rounded-xl bg-orange-50 border border-orange-200 px-4 py-3 text-sm text-orange-700 flex items-center gap-3">
@@ -123,15 +123,15 @@
                         </div>
                         <div>
                             <h3 class="text-lg font-semibold text-slate-900">Manage Storage</h3>
-                            <p class="text-sm text-slate-600">View and organize your albums to optimize storage usage</p>
+                            <p class="text-sm text-slate-600">View and organize your events to optimize storage usage</p>
                         </div>
                     </div>
-                    <a href="{{ route('face_finder.albums.index') }}"
+                    <a href="{{ route('face_finder.events.index') }}"
                        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium hover:from-purple-700 hover:to-indigo-700 transition-all shadow-sm hover:shadow-md">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                         </svg>
-                        Go to Albums
+                        Go to Events
                     </a>
                 </div>
             </div>
