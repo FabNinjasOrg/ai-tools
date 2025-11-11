@@ -40,15 +40,20 @@ Route::prefix('face-finder')->group(function () {
         Route::get('events/create', [FaceFinderController::class, 'eventsCreate'])->name('face_finder.events.create');
         Route::get('load-events', [FaceFinderController::class, 'loadAlbums'])->name('face_finder.load_events');
         Route::post('events/store-name', [FaceFinderController::class, 'storeEvent'])->name('face_finder.events.store_name');
-        Route::post('events', [FaceFinderController::class, 'storeZip'])->name('face_finder.events.store');
+        // Route::post('events', [FaceFinderController::class, 'storeZip'])->name('face_finder.events.store');
         Route::get('events/{uuid}', [FaceFinderController::class, 'show'])->name('face_finder.events.show');
         Route::get('events/{uuid}/photos', [FaceFinderController::class, 'photos'])->name('face_finder.events.photos');
+        Route::get('events/{uuid}/albums', [FaceFinderController::class, 'albums'])->name('face_finder.events.albums');
         Route::post('events/{uuid}/upload-photos', [FaceFinderController::class, 'uploadPhotosForEvent'])->name('face_finder.events.upload_photos');
         // Route::post('events/{uuid}/upload-photos', [FaceFinderController::class, 'uploadPhotosToAlbum'])->name('face_finder.events.upload_photos');
         Route::delete('events/{uuid}/bulk-delete-photos', [FaceFinderController::class, 'bulkDeletePhotos'])->name('face_finder.events.bulk_delete_photos');
         Route::get('events/{uuid}/upload-status', [FaceFinderController::class, 'zipfileUploadStatus'])->name('eventUploadStatus');
         Route::post('events/{uuid}/generate-public', [FaceFinderController::class, 'generatePublic'])->name('face_finder.events.generate_public');
+        Route::post('events/{uuid}/generate-uploader', [FaceFinderController::class, 'generateUploader'])->name('face_finder.events.generate_uploader');
         Route::delete('events/{uuid}', [FaceFinderController::class, 'deleteAlbum'])->name('face_finder.events.delete');
+        // Album detail routes
+        Route::get('albums/{id}', [FaceFinderController::class, 'albumShow'])->name('face_finder.albums.show');
+        Route::get('albums/{id}/photos', [FaceFinderController::class, 'albumPhotos'])->name('face_finder.albums.photos');
         Route::get('buy-subscription', [FaceFinderController::class, 'buySubscription'])->name('face_finder.buy_subscription');
         Route::get('manage-subscription', [FaceFinderController::class, 'manageSubscription'])->name('face_finder.manage_subscription');
         Route::get('storage', [StorageController::class, 'index'])->name('face_finder.storage');

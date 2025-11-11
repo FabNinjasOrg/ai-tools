@@ -57,29 +57,14 @@
                     <span class="font-medium">Quick Upload</span>
                 </a>
 
-                <!-- Manage Events - Always Open Sub-options -->
-                <div class="px-3 py-2.5 text-slate-500 font-medium select-none flex items-center gap-3">
+                <!-- Manage Events - Single Link -->
+                <a href="{{ route('face_finder.events.index') }}"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ request()->routeIs('face_finder.events.index') || request()->routeIs('face_finder.events.show') || request()->routeIs('face_finder.albums.show') ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900' }}">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                     </svg>
-                    <span>Manage Events</span>
-                </div>
-                <div class="ml-4 space-y-1">
-                    <a href="{{ route('face_finder.events.create') }}"
-                       class="flex items-center gap-3 px-3 py-2 rounded-lg transition-all {{ request()->routeIs('face_finder.events.create') ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                        </svg>
-                        <span class="text-sm font-medium">Add Event</span>
-                    </a>
-                    <a href="{{ route('face_finder.events.index') }}"
-                       class="flex items-center gap-3 px-3 py-2 rounded-lg transition-all {{ request()->routeIs('face_finder.events.index') || request()->routeIs('face_finder.events.show') ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                        <span class="text-sm font-medium">Your Events</span>
-                    </a>
-                </div>
+                    <span class="font-medium">Manage Events</span>
+                </a>
 
                 <a href="{{ route('face_finder.storage') }}"
                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ request()->routeIs('face_finder.storage') ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900' }}">

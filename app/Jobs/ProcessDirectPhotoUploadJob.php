@@ -15,6 +15,7 @@ class ProcessDirectPhotoUploadJob implements ShouldQueue
     use Queueable;
 
     public int $eventId;
+    public int $albumId;
     public array $photos;
 
     public $tries = 3;
@@ -23,11 +24,13 @@ class ProcessDirectPhotoUploadJob implements ShouldQueue
     /**
      *
      * @param int $eventId
+     * @param int $albumId
      * @param array $photos Array of photos with ['filename', 'content' (base64 encoded), 'size']
      */
-    public function __construct(int $eventId, array $photos)
+    public function __construct(int $eventId, int $albumId, array $photos)
     {
         $this->eventId = $eventId;
+        $this->albumId = $albumId;
         $this->photos = $photos;
     }
 
@@ -74,6 +77,7 @@ class ProcessDirectPhotoUploadJob implements ShouldQueue
                 // Prepare data for bulk insert
                 $toInsert[] = [
                     'event_id' => $this->eventId,
+                    'album_id' => $this->albumId,
                     'filename' => $uniqueFilename,
                     'path' => $photoS3Path,
                     'size_bytes' => $photoSize,

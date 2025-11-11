@@ -3,12 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Event;
+use App\Models\Album;
 use App\Models\Photo;
 use App\Models\OtpVerificationAttempt;
-use App\Models\User;
 use App\Models\SubscriptionPlan;
-use App\Models\SubscriptionPlanPrice;
-use App\Jobs\PrepareMatchedPhotosZip;
 use App\Jobs\ProcessAlbumPhotoJob;
 use App\Jobs\ProcessDirectPhotoUploadJob;
 use App\Services\CalculateUserStorageService;
@@ -16,7 +14,6 @@ use Illuminate\Http\Request;
 use Auth;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Bus\Batch;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -120,15 +117,23 @@ class FaceFinderController extends Controller
             ->where('upload_status', 'completed')
             ->withCount('photos')
             ->orderByDesc('created_at')
-            ->get(['id', 'uuid', 'name']);
+            ->get(['id', 'uuid', 'name', 'created_at']);
+
+        $albumCounts = Album::query()
+            ->whereIn('event_id', $events->pluck('id'))
+            ->selectRaw('event_id, COUNT(*) as cnt')
+            ->groupBy('event_id')
+            ->pluck('cnt', 'event_id');
 
         return response()->json([
-            'albums' => $events->map(function ($a) {
+            'albums' => $events->map(function ($a) use ($albumCounts) {
                 return [
                     'id' => $a->id,
                     'uuid' => $a->uuid,
                     'name' => $a->name,
                     'count' => $a->photos_count,
+                    'albums_count' => (int) ($albumCounts[$a->id] ?? 0),
+                    'created_at' => $a->created_at,
                 ];
             })
         ]);
@@ -147,11 +152,16 @@ class FaceFinderController extends Controller
 
     public function uploadPhotosForEvent(string $uuid, Request $request)
     {
+        $event = Event::where('uuid', $uuid)
+            ->where('user_id', auth()->id())
+            ->firstOrFail(['id', 'uuid', 'name']);
+
         $validated = $request->validate([
             'zips' => 'nullable|array',
             'zips.*' => 'nullable|file|mimes:zip|max:1024000',
             'photos' => 'nullable|array',
             'photos.*' => 'nullable|file|image|mimes:png,jpg,jpeg,webp',
+            'album_id' => 'nullable|integer|exists:albums,id',
         ], [
             'photos.*.image' => 'All files must be valid images.',
             'photos.*.mimes' => 'Photos must be in PNG, JPG, JPEG, or WEBP format.',
@@ -200,11 +210,13 @@ class FaceFinderController extends Controller
             }
         }
 
+        $albumId = $request->input('album_id');
+
         // Prepare all zips using validated data
         $zipPreparations = [];
         if (!empty($allZipFiles) && !empty($zipValidation['data'])) {
             foreach ($zipValidation['data'] as $zipData) {
-                $preparation = $this->prepareZipForProcessing($uuid, $zipData);
+                $preparation = $this->prepareZipForProcessing($uuid, $albumId, $zipData);
                 if (!$preparation) {
                     $this->cleanupZipFiles($zipValidation['data']);
                     return response()->json([
@@ -231,7 +243,7 @@ class FaceFinderController extends Controller
         // Process photos
         $photoResult = null;
         if (!empty($allPhotoFiles)) {
-            $photoResult = $this->uploadPhotosToAlbum($uuid, $allPhotoFiles);
+            $photoResult = $this->uploadPhotosToAlbum($uuid, $allPhotoFiles, $albumId);
             if (!$photoResult) {
                 return response()->json([
                     'message' => 'Failed to process photos. Please try again.'
@@ -245,7 +257,11 @@ class FaceFinderController extends Controller
         if (!empty($results)) {
             return response()->json([
                 'message' => 'Files are being uploaded. Please wait for a few minutes.',
-                'results' => $results
+                'results' => $results,
+                'event' => [
+                    'uuid' => $event->uuid,
+                    'name' => $event->name
+                ]
             ]);
         }
 
@@ -364,7 +380,7 @@ class FaceFinderController extends Controller
         ];
     }
 
-    private function prepareZipForProcessing($eventUuid, array $zipData): ?array
+    private function prepareZipForProcessing($eventUuid, $albumId, array $zipData): ?array
     {
         $userId = auth()->id();
         $originalName = $zipData['originalName'];
@@ -372,7 +388,7 @@ class FaceFinderController extends Controller
         $localTempZipPath = $zipData['tempZipPath'];
         $localTempDir = $zipData['tempDir'];
 
-        // Get event record
+        // Check event
         $event = Event::where('uuid', $eventUuid)->first();
         if (!$event) {
             Log::error('Event not found', ['uuid' => $eventUuid]);
@@ -381,8 +397,18 @@ class FaceFinderController extends Controller
             return null;
         }
 
+        // Check album
+        $album = Album::find($albumId);
+        if (!$album) {
+            Log::error('Album not found', ['album id' => $albumId]);
+            @unlink($localTempZipPath);
+            @rmdir($localTempDir);
+            return null;
+        }
+
         return [
             'eventId' => $event->id,
+            'albumId' => $album->id,
             'userId' => $userId,
             'eventUuid' => $eventUuid,
             'originalName' => $originalName,
@@ -406,13 +432,25 @@ class FaceFinderController extends Controller
 
     private function dispatchZipJobs(array $preparation): ?array
     {
-        $event = $preparation['event'];
         $eventId = $preparation['eventId'];
+        $albumId = $preparation['albumId'];
         $userId = $preparation['userId'];
         $eventUuid = $preparation['eventUuid'];
         $photos = $preparation['photos'];
         $localTempZipPath = $preparation['tempZipPath'];
         $localTempDir = $preparation['tempDir'];
+
+        if (!$albumId) {
+            $album = Album::where('event_id', $eventId)->orderBy('created_at')->first();
+            if (!$album) {
+                // Create a default album if none exists
+                $album = Album::create([
+                    'event_id' => $eventId,
+                    'name' => 'Main Album',
+                ]);
+            }
+            $albumId = $album->id;
+        }
 
         // Dispatch job to process photos
         $batchName = "event_{$userId}_{$eventUuid}";
@@ -420,7 +458,7 @@ class FaceFinderController extends Controller
 
         // Split into chunks, 100 photos per job
         foreach (array_chunk($photos, 100) as $chunk) {
-            $batchJobs[] = new ProcessAlbumPhotoJob($eventId, $userId, $eventUuid, $chunk, $localTempZipPath);
+            $batchJobs[] = new ProcessAlbumPhotoJob($eventId, $albumId, $userId, $eventUuid, $chunk, $localTempZipPath);
         }
 
         $batch = Bus::batch($batchJobs)
@@ -455,25 +493,31 @@ class FaceFinderController extends Controller
             ->dispatch();
 
         return [
-            'album' => [
-                'id' => $event->id,
-                'uuid' => $event->uuid,
-                'name' => $event->name,
-                'count' => $event->photos_count,
-            ],
             'batch_id' => $batch->id,
             'type' => 'zip'
         ];
     }
 
 
-    public function uploadPhotosToAlbum(string $eventUuid, $photos)
+    public function uploadPhotosToAlbum(string $eventUuid, $photos, ?int $albumId = null)
     {
-        $album = Event::query()->where('uuid', $eventUuid)->first();
+        $event = Event::query()->where('uuid', $eventUuid)->first();
 
-        if (!$album) {
+        if (!$event) {
             Log::error('Event not found for photo upload', ['uuid' => $eventUuid]);
             return null;
+        }
+
+        if (!$albumId) {
+            $album = Album::where('event_id', $event->id)->orderBy('created_at')->first();
+            if (!$album) {
+                // Create a default album if none exists
+                $album = Album::create([
+                    'event_id' => $event->id,
+                    'name' => 'Main Album',
+                ]);
+            }
+            $albumId = $album->id;
         }
 
         // Prepare photo data with base64 encoding for queue serialization
@@ -488,7 +532,7 @@ class FaceFinderController extends Controller
 
         // Batch photos into groups of 10 and dispatch jobs
         foreach (array_chunk($photoData, 10) as $photoBatch) {
-            ProcessDirectPhotoUploadJob::dispatch($album->id, $photoBatch)->onQueue('high');
+            ProcessDirectPhotoUploadJob::dispatch($event->id, $albumId, $photoBatch)->onQueue('high');
         }
 
         return [
@@ -500,7 +544,7 @@ class FaceFinderController extends Controller
 
     public function photos(string $uuid, Request $request)
     {
-        $event = Event::query()->where('uuid', $uuid)->firstOrFail(['id','uuid','name','public_url']);
+        $event = Event::query()->where('uuid', $uuid)->firstOrFail(['id','uuid','name','public_url','uploader_url']);
 
         $perPage = $request->query('per_page', 24);
 
@@ -514,6 +558,78 @@ class FaceFinderController extends Controller
                 'uuid' => $event->uuid,
                 'name' => $event->name,
                 'public_url' => $event->public_url,
+                'uploader_url' => $event->uploader_url,
+            ],
+            'photos' => $photos->map(function($p){
+                return [
+                    'id' => $p->id,
+                    'src' => Storage::disk('s3')->temporaryUrl($p->path, now()->addDay()),
+                    'size' => $p->size_bytes,
+                ];
+            }),
+            'pagination' => [
+                'current_page' => $photos->currentPage(),
+                'last_page' => $photos->lastPage(),
+                'per_page' => $photos->perPage(),
+                'total' => $photos->total(),
+                'has_more_pages' => $photos->hasMorePages(),
+            ],
+        ]);
+    }
+
+    public function albums(string $uuid, Request $request)
+    {
+        $event = Event::query()->where('uuid', $uuid)->firstOrFail(['id','uuid','name']);
+        $albums = Album::query()
+            ->where('event_id', $event->id)
+            ->orderByDesc('id')
+            ->get(['id','name','created_at']);
+
+        return response()->json([
+            'event_name' => $event->name,
+            'albums' => $albums->map(function ($a) {
+                return [
+                    'id' => $a->id,
+                    'name' => $a->name,
+                    'created_at' => $a->created_at,
+                ];
+            })
+        ]);
+    }
+
+    public function albumShow(int $id)
+    {
+        $album = Album::query()->where('id', $id)->firstOrFail(['id','event_id','name','created_at']);
+        $event = Event::query()->where('id', $album->event_id)->firstOrFail(['id','uuid','name']);
+
+        return view('faceFinder.album', [
+            'albumId' => $album->id,
+            'albumName' => $album->name,
+            'eventUuid' => $event->uuid,
+            'eventName' => $event->name,
+        ]);
+    }
+
+    public function albumPhotos(int $id, Request $request)
+    {
+        $album = Album::query()->where('id', $id)->firstOrFail(['id','event_id','name','created_at']);
+        $event = Event::query()->where('id', $album->event_id)->firstOrFail(['id','uuid','name','public_url','uploader_url']);
+
+        $perPage = $request->query('per_page', 24);
+
+        $photos = Photo::query()
+            ->where('event_id', $event->id)
+            ->orderBy('id')
+            ->paginate($perPage, ['id','filename','path','size_bytes']);
+
+        return response()->json([
+            'album' => [
+                'id' => $album->id,
+                'name' => $album->name,
+                'event_uuid' => $event->uuid,
+                'event_name' => $event->name,
+                'public_url' => $event->public_url,
+                'uploader_url' => $event->uploader_url,
             ],
             'photos' => $photos->map(function($p){
                 return [
@@ -546,6 +662,21 @@ class FaceFinderController extends Controller
         $event->save();
 
         return response()->json(['public_url' => $publicUrl]);
+    }
+
+    public function generateUploader(string $uuid)
+    {
+        $event = Event::query()->where('uuid', $uuid)->where('user_id', auth()->id())->firstOrFail();
+        if ($event->uploader_url) {
+            return response()->json(['uploader_url' => $event->uploader_url]);
+        }
+
+        // Generate uploader URL pointing to quick upload page with event UUID
+        $uploaderUrl = route('face_finder.upload_photos') . '?event=' . $event->uuid;
+        $event->uploader_url = $uploaderUrl;
+        $event->save();
+
+        return response()->json(['uploader_url' => $uploaderUrl]);
     }
 
     public function deleteAlbum(string $uuid, Request $request)
@@ -1097,30 +1228,26 @@ class FaceFinderController extends Controller
         }
     }
 
-    /**
-     * Handle uploads for route without uuid (legacy route)
-     * Gets or creates an event first, then processes uploads
-     */
-    public function storeZip(Request $request)
-    {
-        // Get user's first event or create a new one
-        $event = Event::where('user_id', auth()->id())->first();
+    // public function storeZip(Request $request)
+    // {
+    //     // Get user's first event or create a new one
+    //     $event = Event::where('user_id', auth()->id())->first();
 
-        if (!$event) {
-            // Create a new event with default name
-            $uuid = (string) Str::uuid();
-            $event = Event::create([
-                'user_id' => auth()->id(),
-                'uuid' => $uuid,
-                'name' => 'My Event',
-                'photos_count' => 0,
-                'upload_status' => 'completed',
-            ]);
-        }
+    //     if (!$event) {
+    //         // Create a new event with default name
+    //         $uuid = (string) Str::uuid();
+    //         $event = Event::create([
+    //             'user_id' => auth()->id(),
+    //             'uuid' => $uuid,
+    //             'name' => 'My Event',
+    //             'photos_count' => 0,
+    //             'upload_status' => 'completed',
+    //         ]);
+    //     }
 
-        // Redirect to the common upload function
-        return $this->uploadPhotosForEvent($event->uuid, $request);
-    }
+    //     // Redirect to the common upload function
+    //     return $this->uploadPhotosForEvent($event->uuid, $request);
+    // }
 
     public function eventsCreate(Request $request)
     {
@@ -1131,6 +1258,7 @@ class FaceFinderController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'album_name' => 'required|string|max:255',
         ]);
 
         $userId = auth()->id();
@@ -1152,6 +1280,12 @@ class FaceFinderController extends Controller
             'name' => $validated['name'],
             'photos_count' => 0,
             'upload_status' => 'completed',
+        ]);
+
+        // Create an Album
+        Album::create([
+            'event_id' => $event->id,
+            'name' => $validated['album_name'],
         ]);
 
         return redirect()->route('face_finder.events.show', ['uuid' => $event->uuid]);

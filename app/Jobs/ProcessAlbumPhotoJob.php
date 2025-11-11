@@ -16,6 +16,7 @@ class ProcessAlbumPhotoJob implements ShouldQueue
     use Queueable, Batchable;
 
     public int $eventId;
+    public int $albumId;
     public int $userId;
     public string $uuid;
     public array $photoEntries;
@@ -27,9 +28,10 @@ class ProcessAlbumPhotoJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct($eventId, $userId, $uuid, array $photoEntries, string $zipPath)
+    public function __construct($eventId, $albumId, $userId, $uuid, array $photoEntries, string $zipPath)
     {
         $this->eventId = $eventId;
+        $this->albumId = $albumId;
         $this->userId = $userId;
         $this->uuid = $uuid;
         $this->photoEntries = $photoEntries;
@@ -77,6 +79,7 @@ class ProcessAlbumPhotoJob implements ShouldQueue
 
                 $toInsert[] = [
                     'event_id' => $this->eventId,
+                    'album_id' => $this->albumId,
                     'filename' => $uniqueFilename,
                     'path' => $photoS3Path,
                     'size_bytes' => strlen($content),

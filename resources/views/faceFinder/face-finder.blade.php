@@ -93,25 +93,77 @@
                                 class="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white inline-flex items-center justify-center">
                                 FF</div>
                             <div>
-                                <h2 class="text-base font-semibold text-slate-900">Upload ZIP</h2>
+                                <h2 class="text-base font-semibold text-slate-900">Upload Photos</h2>
                             </div>
                         </div>
                     </div>
-                    <div class="p-5">
-                        <!-- Uppy Dashboard Container -->
-                        <div x-ref="uppyContainer"></div>
+                    <div class="p-5 space-y-5">
+                            <div>
+                            <label for="event-select" class="block text-sm font-semibold text-slate-700 mb-2">Select Event <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <select
+                                    id="event-select"
+                                    x-model="selectedEventUuid"
+                                    @change="loadAlbumsForSelectedEvent()"
+                                    class="w-full px-4 py-3 pr-10 rounded-xl border border-slate-300 bg-white text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all shadow-sm hover:shadow-md appearance-none cursor-pointer"
+                                    :class="selectedEventUuid ? 'text-slate-900' : 'text-slate-500'"
+                                >
+                                    <option value="" disabled>Choose an event...</option>
+                                    <template x-for="event in events" :key="event.uuid">
+                                        <option :value="event.uuid" x-text="event.name"></option>
+                                    </template>
+                                </select>
+                            </div>
 
-                        <!-- Upload Button -->
-                        <div class="mt-4 flex items-center justify-end">
-                            <button type="button" @click="proceedPhotos()"
-                                class="px-6 py-3 rounded-xl font-semibold inline-flex items-center gap-2 transition-all bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 shadow-md hover:shadow-lg">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5"
-                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M12 19V5m0 0l-5 5m5-5l5 5" />
-                                </svg>
-                                <span>Upload Event</span>
-                            </button>
-                        </div>
+                            <div x-show="!loading && events.length === 0" class="mt-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                                <p class="text-xs text-amber-800 flex items-start gap-2">
+                                    <svg class="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span>No events found. Please <a href="{{ route('face_finder.events.index') }}" class="font-semibold text-amber-900 underline hover:text-amber-700">create an event</a> first before uploading photos.</span>
+                                </p>
+                            </div>
+                                </div>
+                            <div>
+                            <label for="album-select" class="block text-sm font-semibold text-slate-700 mb-2">Select Album <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <select
+                                    id="album-select"
+                                    x-model="selectedAlbumId"
+                                    :disabled="!selectedEventUuid"
+                                    class="w-full px-4 py-3 pr-10 rounded-xl border border-slate-300 bg-white text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all shadow-sm hover:shadow-md appearance-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400"
+                                    :class="selectedAlbumId ? 'text-slate-900' : 'text-slate-500'"
+                                >
+                                    <option value="" disabled x-show="!selectedEventUuid">Select an event first…</option>
+                                    <option value="" disabled x-show="selectedEventUuid && albums.length === 0">No albums found</option>
+                                    <template x-for="album in albums" :key="album.id">
+                                        <option :value="album.id" x-text="album.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <p class="mt-2 text-xs text-slate-500" x-show="selectedEventUuid && albums.length === 0">No albums yet for this event.</p>
+                                </div>
+
+                            <!-- Uppy Dashboard Container -->
+                            <div x-ref="uppyContainer"></div>
+
+                            <!-- Upload Button -->
+                            <div class="mt-4 flex items-center justify-end">
+                                <button
+                                    type="button"
+                                    @click="proceedPhotos()"
+                                    :disabled="!selectedEventUuid || selectedEventUuid === '' || !selectedAlbumId"
+                                    class="px-6 py-3 rounded-xl font-semibold inline-flex items-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                    :class="(selectedEventUuid && selectedEventUuid !== '' && selectedAlbumId) ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700' : 'bg-slate-300 text-slate-500'"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 19V5m0 0l-5 5m5-5l5 5" />
+                                    </svg>
+                                    <span>Upload Photos</span>
+                                </button>
+                            </div>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -125,7 +177,13 @@
             let uppyManager = null;
 
             return {
-                init() {
+                events: [],
+                albums: [],
+                selectedEventUuid: '',
+                selectedAlbumId: '',
+                loading: true,
+
+                async init() {
                     const self = this;
                     uppyManager = new window.UppyUploadManager({
                         container: this.$refs.uppyContainer,
@@ -135,10 +193,73 @@
                             self.$store.messages.showError(message);
                         }
                     });
+
+                    // Load events on initialization
+                    await this.loadEvents();
+                },
+
+                async loadEvents() {
+                    try {
+                        this.loading = true;
+                        const response = await fetch("{{ route('face_finder.load_events') }}", {
+                            method: 'GET',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Failed to load events');
+                        }
+
+                        const data = await response.json();
+                        this.events = data.albums || [];
+                    } catch (error) {
+                        console.error('Error loading events:', error);
+                        this.$store.messages.showError('Failed to load events. Please refresh the page.');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async loadAlbumsForSelectedEvent() {
+                    this.albums = [];
+                    this.selectedAlbumId = '';
+
+                    if (!this.selectedEventUuid) return;
+
+                    try {
+                        const url = `{{ route('face_finder.events.albums', ['uuid' => ':uuid']) }}`.replace(':uuid', this.selectedEventUuid);
+
+                        const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+
+                        if (!res.ok) throw new Error('Failed to load albums');
+
+                        const payload = await res.json();
+
+                        this.albums = Array.isArray(payload.albums) ? payload.albums : [];
+                        // Auto-select first album if exists
+                        if (this.albums.length > 0) {
+                            this.selectedAlbumId = this.albums[0].id;
+                        }
+                    } catch (e) {
+                        this.$store.messages.showError('Could not load albums for the selected event.');
+                    }
                 },
 
                 async proceedPhotos() {
                     if (!uppyManager) return;
+
+                    // Validate event selection - must have a valid UUID
+                    if (!this.selectedEventUuid || (typeof this.selectedEventUuid === 'string' && this.selectedEventUuid.trim() === '')) {
+                        this.$store.messages.showError('Please select an event to upload photos to.');
+                        return;
+                    }
+                    if (!this.selectedAlbumId) {
+                        this.$store.messages.showError('Please select an album.');
+                        return;
+                    }
 
                     const files = uppyManager.getFiles();
                     if (files.length === 0) {
@@ -175,7 +296,11 @@
                             }
                         });
 
-                        const res = await fetch("{{ route('face_finder.events.store') }}", {
+                        form.append('album_id', String(this.selectedAlbumId));
+
+                        const uploadUrl = `{{ route('face_finder.events.upload_photos', ['uuid' => ':uuid']) }}`.replace(':uuid', this.selectedEventUuid);
+
+                        const res =  await fetch(uploadUrl, {
                             method: 'POST',
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest',
@@ -184,30 +309,35 @@
                             body: form
                         });
 
+                        const data = await res.json();
+
                         if (!res.ok) {
-                            const data = await res.json().catch(() => ({}));
                             throw new Error(data.message || 'Upload failed');
                         }
 
-                        const data = await res.json();
-                        if (data && data.album) {
-                            this.$store.messages.showSuccess('Photos uploaded successfully! Processing photos...', 0);
+                        // Handle success response based on message
+                        if (data && data.message) {
+                            // Show success message
+                            this.$store.messages.showSuccess(data.message, 0);
 
-                            // Store upload status for tracking
-                            if (data.album.uuid) {
+                            // Store event info in localStorage for face finding page
+                            if (data.event && data.event.uuid) {
                                 localStorage.setItem('ff_uploading_event', JSON.stringify({
-                                    uuid: data.album.uuid,
-                                    name: data.album.name || ''
+                                    uuid: data.event.uuid,
+                                    name: data.event.name || ''
                                 }));
                             }
 
+                            // Reset uppy for next upload
+                            uppyManager.reset();
+
+                            // Redirect to events list after a short delay
                             setTimeout(() => {
                                 window.location.href = "{{ route('face_finder.events.index') }}";
                             }, 2000);
+                        } else {
+                            throw new Error('Unexpected response format');
                         }
-
-                        // Reset uppy for next upload
-                        uppyManager.reset();
                     } catch (e) {
                         this.$store.messages.showError(e.message || 'Something went wrong.');
                     }
