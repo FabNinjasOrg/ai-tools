@@ -40,7 +40,7 @@
                 <button @click="activeTab = 'links'"
                     :class="activeTab === 'links' ? 'text-green-600 border-b-2 border-green-600' : 'text-slate-600 hover:text-slate-900'"
                     class="px-6 py-4 font-medium text-sm transition-colors">
-                    Links
+                    public Link
                 </button>
                 <button @click="activeTab = 'analytics'"
                     :class="activeTab === 'analytics' ? 'text-green-600 border-b-2 border-green-600' : 'text-slate-600 hover:text-slate-900'"
@@ -246,27 +246,27 @@
                     }
                 },
 
-                initUppy() {
-                    if (!window.UppyUploadManager) {
-                        console.error('Uppy manager not loaded');
-                        return;
-                    }
-                    // Prevent double initialization
-                    if (uppyManager) {
-                        return;
-                    }
+                // initUppy() {
+                //     if (!window.UppyUploadManager) {
+                //         console.error('Uppy manager not loaded');
+                //         return;
+                //     }
+                //     // Prevent double initialization
+                //     if (uppyManager) {
+                //         return;
+                //     }
 
-                    uppyManager = new window.UppyUploadManager({
-                        container: this.$refs.uppyModalContainer,
-                        inline: false,
-                        onUpload: (files) => {
-                            this.uploadPhotos(files);
-                        },
-                        onError: (message) => {
-                            this.$store.messages.showError(message);
-                        }
-                    });
-                },
+                //     uppyManager = new window.UppyUploadManager({
+                //         container: this.$refs.uppyModalContainer,
+                //         inline: false,
+                //         onUpload: (files) => {
+                //             this.uploadPhotos(files);
+                //         },
+                //         onError: (message) => {
+                //             this.$store.messages.showError(message);
+                //         }
+                //     });
+                // },
 
                 openUploadModal() {
                     if (uppyManager) {
@@ -274,64 +274,64 @@
                     }
                 },
 
-                async uploadPhotos(files) {
-                    if (!files || files.length === 0) {
-                        this.$store.messages.showError('Please select at least one photo to upload.');
-                        return;
-                    }
+                // async uploadPhotos(files) {
+                //     if (!files || files.length === 0) {
+                //         this.$store.messages.showError('Please select at least one photo to upload.');
+                //         return;
+                //     }
 
-                    const formData = new FormData();
+                //     const formData = new FormData();
 
-                    // Separate zip files and photo files
-                    files.forEach((file) => {
-                        if (!file) return;
+                //     // Separate zip files and photo files
+                //     files.forEach((file) => {
+                //         if (!file) return;
 
-                        const fileName = file.name || 'file';
-                        const fileExtension = fileName.toLowerCase().split('.').pop();
+                //         const fileName = file.name || 'file';
+                //         const fileExtension = fileName.toLowerCase().split('.').pop();
 
-                        // Check if it's a zip file
-                        if (fileExtension === 'zip') {
-                            formData.append('zips[]', file.data, fileName);
-                        } else {
-                            // It's a photo file
-                            formData.append('photos[]', file.data, fileName);
-                        }
-                    });
+                //         // Check if it's a zip file
+                //         if (fileExtension === 'zip') {
+                //             formData.append('zips[]', file.data, fileName);
+                //         } else {
+                //             // It's a photo file
+                //             formData.append('photos[]', file.data, fileName);
+                //         }
+                //     });
 
-                    try {
-                        const response = await fetch('{{ route('face_finder.events.upload_photos', ['uuid' => $uuid]) }}', {
-                            method: 'POST',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                            },
-                            body: formData
-                        });
+                //     try {
+                //         const response = await fetch('{{ route('face_finder.events.upload_photos', ['uuid' => $uuid]) }}', {
+                //             method: 'POST',
+                //             headers: {
+                //                 'X-Requested-With': 'XMLHttpRequest',
+                //                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                //             },
+                //             body: formData
+                //         });
 
-                        if (!response.ok) {
-                            const data = await response.json().catch(() => ({}));
-                            throw new Error(data.message || 'Upload failed');
-                        }
+                //         if (!response.ok) {
+                //             const data = await response.json().catch(() => ({}));
+                //             throw new Error(data.message || 'Upload failed');
+                //         }
 
-                        const data = await response.json();
-                        this.$store.messages.showSuccess(data.message || 'Photos uploaded successfully. It will take some time to process them. Kindly, wait.');
+                //         const data = await response.json();
+                //         this.$store.messages.showSuccess(data.message || 'Photos uploaded successfully. It will take some time to process them. Kindly, wait.');
 
-                        // Close modal and reset
-                        uppyManager.closeModal();
-                        uppyManager.reset();
+                //         // Close modal and reset
+                //         uppyManager.closeModal();
+                //         uppyManager.reset();
 
-                        // Reload photos
-                        this.photos = [];
-                        this.page = 0;
-                        this.hasMore = true;
-                        await this.loadMore();
-                    } catch (error) {
-                        console.error('Upload error:', error);
-                        this.$store.messages.showError(error.message || 'Failed to upload photos. Please try again.');
+                //         // Reload photos
+                //         this.photos = [];
+                //         this.page = 0;
+                //         this.hasMore = true;
+                //         await this.loadMore();
+                //     } catch (error) {
+                //         console.error('Upload error:', error);
+                //         this.$store.messages.showError(error.message || 'Failed to upload photos. Please try again.');
 
-                        uppyManager.reset();
-                    }
-                },
+                //         uppyManager.reset();
+                //     }
+                // },
 
                 async loadAlbums() {
                     this.albumsLoading = true;
@@ -357,34 +357,34 @@
                 },
 
                 // actions
-                async loadMore() {
-                    if (this.loading || !this.hasMore) return;
-                    this.loading = true;
-                    try {
-                        const response = await fetch(this.getPhotosApiUrl(), {
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        });
-                        if (!response.ok) throw new Error('Failed to load photos');
+                // async loadMore() {
+                //     if (this.loading || !this.hasMore) return;
+                //     this.loading = true;
+                //     try {
+                //         const response = await fetch(this.getPhotosApiUrl(), {
+                //             headers: {
+                //                 'X-Requested-With': 'XMLHttpRequest'
+                //             }
+                //         });
+                //         if (!response.ok) throw new Error('Failed to load photos');
 
-                        const payload = await response.json();
-                        this.eventName = payload?.album?.name || this.eventName;
-                        if (payload?.album?.public_url) this.publicUrl = payload.album.public_url;
-                        if (Array.isArray(payload.photos)) this.photos.push(...payload.photos);
+                //         const payload = await response.json();
+                //         this.eventName = payload?.album?.name || this.eventName;
+                //         if (payload?.album?.public_url) this.publicUrl = payload.album.public_url;
+                //         if (Array.isArray(payload.photos)) this.photos.push(...payload.photos);
 
-                        // Handle new pagination structure
-                        if (payload.pagination) {
-                            this.hasMore = Boolean(payload.pagination.has_more_pages);
-                            this.page = payload.pagination.current_page;
-                        }
-                    } catch (error) {
-                        console.error(error);
-                        this.$store.messages.showError('Failed to load photos. Please try again.');
-                    } finally {
-                        this.loading = false;
-                    }
-                },
+                //         // Handle new pagination structure
+                //         if (payload.pagination) {
+                //             this.hasMore = Boolean(payload.pagination.has_more_pages);
+                //             this.page = payload.pagination.current_page;
+                //         }
+                //     } catch (error) {
+                //         console.error(error);
+                //         this.$store.messages.showError('Failed to load photos. Please try again.');
+                //     } finally {
+                //         this.loading = false;
+                //     }
+                // },
 
                 async generatePublic() {
                     this.loadingUrl = true;

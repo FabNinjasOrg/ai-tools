@@ -18,7 +18,6 @@ return new class extends Migration
             $table->string('name');
             $table->unsignedInteger('photos_count')->default(0);
             $table->string('public_url')->nullable()->unique();
-            $table->string('uploader_url')->nullable()->unique();
             $table->timestamps();
             $table->index(['user_id', 'created_at']);
         });

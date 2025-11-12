@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\Album;
 use App\Models\Photo;
+use App\Models\UploaderLink;
 use App\Models\OtpVerificationAttempt;
 use App\Models\SubscriptionPlan;
 use App\Jobs\ProcessAlbumPhotoJob;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use ZipArchive;
 use Illuminate\Support\Facades\Http;
+use Carbon\Carbon;
 
 class FaceFinderController extends Controller
 {
@@ -77,6 +79,58 @@ class FaceFinderController extends Controller
             'success' => true,
             'message' => 'Country code already set'
         ]);
+    }
+
+    public function createUploaderLink(int $id, Request $request)
+    {
+        $album = Album::query()->where('id', $id)->first(['id','event_id','name']);
+
+        $validated = $request->validate([
+            'album_id' => ['required', 'integer', 'in:'.$album->id],
+            'event_uuid' => ['required'],
+            'start_at' => ['nullable', 'date'],
+            'end_at' => ['nullable', 'date', 'after_or_equal:start_at'],
+            'passcode' => ['nullable', 'string', 'max:255'],
+            'status' => ['required', 'in:active,inactive'],
+        ]);
+
+        $url = route('face_finder.uploader.show', ['uuid' => $request->event_uuid, 'albumId' => base64_encode($album->id)]);
+
+        UploaderLink::create([
+            'album_id' => $album->id,
+            'url' => $url,
+            'passcode' => $validated['passcode'] ?? null,
+            'start' => $validated['start_at'] ?? null,
+            'end' => $validated['end_at'] ?? null,
+            'status' => $validated['status'],
+        ]);
+
+        return redirect()
+            ->route('face_finder.albums.show', ['id' => $album->id, 'tab' => 'links'])
+            ->with('success', 'Uploader link created successfully.');
+    }
+
+    public function updateUploaderLink(int $id, Request $request)
+    {
+        $album = Album::query()->where('id', $id)->firstOrFail(['id','event_id','name']);
+        $link = UploaderLink::query()->where('album_id', $album->id)->latest('id')->firstOrFail();
+
+        $validated = $request->validate([
+            'start_at' => ['nullable', 'date'],
+            'end_at' => ['nullable', 'date', 'after_or_equal:start_at'],
+            'passcode' => ['nullable', 'string', 'max:255'],
+            'status' => ['required', 'in:active,inactive'],
+        ]);
+
+        $link->start = $validated['start_at'] ?? null;
+        $link->end = $validated['end_at'] ?? null;
+        $link->passcode = $validated['passcode'] ?? null;
+        $link->status = $validated['status'];
+        $link->save();
+
+        return redirect()
+            ->route('face_finder.albums.show', ['id' => $album->id, 'tab' => 'links'])
+            ->with('success', 'Uploader link updated successfully.');
     }
 
     public function show(string $uuid)
@@ -152,9 +206,8 @@ class FaceFinderController extends Controller
 
     public function uploadPhotosForEvent(string $uuid, Request $request)
     {
-        $event = Event::where('uuid', $uuid)
-            ->where('user_id', auth()->id())
-            ->firstOrFail(['id', 'uuid', 'name']);
+        $event = Event::where('uuid', $uuid)->firstOrFail(['id', 'user_id', 'uuid', 'name']);
+        $userId = auth()->user()->id ?? $event->user_id;
 
         $validated = $request->validate([
             'zips' => 'nullable|array',
@@ -171,7 +224,7 @@ class FaceFinderController extends Controller
         $allPhotoFiles = $request->file('photos', []);
 
         if (!userHasAccessibility()) {
-            $existingEvent = Event::where('user_id', auth()->id())->first();
+            $existingEvent = Event::where('user_id', $userId)->first();
             if ($existingEvent) {
                 return response()->json([
                     'message' => 'Trial users can create only one event. Please delete your existing event or upgrade your subscription.'
@@ -188,7 +241,7 @@ class FaceFinderController extends Controller
         // Validate all zip files first
         $zipPhotoCount = 0;
         if (!empty($allZipFiles)) {
-            $zipValidation = $this->validateZipFiles($allZipFiles);
+            $zipValidation = $this->validateZipFiles($allZipFiles, $userId);
             if (!$zipValidation['valid']) {
                 return response()->json([
                     'message' => $zipValidation['message']
@@ -216,7 +269,7 @@ class FaceFinderController extends Controller
         $zipPreparations = [];
         if (!empty($allZipFiles) && !empty($zipValidation['data'])) {
             foreach ($zipValidation['data'] as $zipData) {
-                $preparation = $this->prepareZipForProcessing($uuid, $albumId, $zipData);
+                $preparation = $this->prepareZipForProcessing($uuid, $albumId, $userId, $zipData);
                 if (!$preparation) {
                     $this->cleanupZipFiles($zipValidation['data']);
                     return response()->json([
@@ -270,12 +323,11 @@ class FaceFinderController extends Controller
         ], 422);
     }
 
-    private function validateZipFiles(array $zipFiles): array
+    private function validateZipFiles(array $zipFiles, int $userId): array
     {
         $allowedExtensions = ['png', 'jpg', 'jpeg', 'webp'];
         $totalPhotoCount = 0;
         $zipData = [];
-        $userId = auth()->id();
 
         foreach ($zipFiles as $zipFile) {
             $originalName = $zipFile->getClientOriginalName();
@@ -380,9 +432,8 @@ class FaceFinderController extends Controller
         ];
     }
 
-    private function prepareZipForProcessing($eventUuid, $albumId, array $zipData): ?array
+    private function prepareZipForProcessing($eventUuid, $albumId, $userId, array $zipData): ?array
     {
-        $userId = auth()->id();
         $originalName = $zipData['originalName'];
         $photos = $zipData['photos'];
         $localTempZipPath = $zipData['tempZipPath'];
@@ -601,19 +652,21 @@ class FaceFinderController extends Controller
     {
         $album = Album::query()->where('id', $id)->firstOrFail(['id','event_id','name','created_at']);
         $event = Event::query()->where('id', $album->event_id)->firstOrFail(['id','uuid','name']);
+        $uploaderLink = UploaderLink::query()->where('album_id', $album->id)->latest('id')->first();
 
         return view('faceFinder.album', [
             'albumId' => $album->id,
             'albumName' => $album->name,
             'eventUuid' => $event->uuid,
             'eventName' => $event->name,
+            'uploaderLink' => $uploaderLink,
         ]);
     }
 
     public function albumPhotos(int $id, Request $request)
     {
-        $album = Album::query()->where('id', $id)->firstOrFail(['id','event_id','name','created_at']);
-        $event = Event::query()->where('id', $album->event_id)->firstOrFail(['id','uuid','name','public_url','uploader_url']);
+        $album = Album::query()->where('id', $id)->firstOrFail(['id','event_id','name', 'uploader_url', 'created_at']);
+        $event = Event::query()->where('id', $album->event_id)->firstOrFail(['id','uuid','name','public_url']);
 
         $perPage = $request->query('per_page', 24);
 
@@ -629,7 +682,7 @@ class FaceFinderController extends Controller
                 'event_uuid' => $event->uuid,
                 'event_name' => $event->name,
                 'public_url' => $event->public_url,
-                'uploader_url' => $event->uploader_url,
+                'uploader_url' => $album->uploader_url,
             ],
             'photos' => $photos->map(function($p){
                 return [
@@ -662,21 +715,6 @@ class FaceFinderController extends Controller
         $event->save();
 
         return response()->json(['public_url' => $publicUrl]);
-    }
-
-    public function generateUploader(string $uuid)
-    {
-        $event = Event::query()->where('uuid', $uuid)->where('user_id', auth()->id())->firstOrFail();
-        if ($event->uploader_url) {
-            return response()->json(['uploader_url' => $event->uploader_url]);
-        }
-
-        // Generate uploader URL pointing to quick upload page with event UUID
-        $uploaderUrl = route('face_finder.upload_photos') . '?event=' . $event->uuid;
-        $event->uploader_url = $uploaderUrl;
-        $event->save();
-
-        return response()->json(['uploader_url' => $uploaderUrl]);
     }
 
     public function deleteAlbum(string $uuid, Request $request)
@@ -1291,4 +1329,77 @@ class FaceFinderController extends Controller
         return redirect()->route('face_finder.events.show', ['uuid' => $event->uuid]);
     }
 
+    public function uploaderPage($uuid, $albumId, Request $request)
+    {
+        $cookiePasscode = $request->cookie('uploader_passcode') ?? base64_decode($request->cookie('uploader_passcode'));
+        $isUserValidated = false;
+        $isStorageFull = false;
+        $isLinkExpired = false;
+
+        if(isset($cookiePasscode) && !empty($cookiePasscode)){
+            $isUserValidated = true;
+        }
+
+        $encodedAlbumId = base64_decode($albumId);
+
+        $album = Album::with(['event' => function ($query) use ($uuid) {
+            $query->where('uuid',  $uuid);
+        }, 'event.user'])->find($encodedAlbumId);
+
+        $uploaderLink = UploaderLink::where('album_id', $album->id)->first();
+
+        if ($isUserValidated && $album && $album->event) {
+            if ($uploaderLink) {
+                $now = Carbon::now();
+                $startDate = $uploaderLink->start ? Carbon::parse($uploaderLink->start) : null;
+                $endDate = $uploaderLink->end ? Carbon::parse($uploaderLink->end) : null;
+
+                if (($startDate && $now->lt($startDate)) || ($endDate && $now->gt($endDate))) {
+                    $isLinkExpired = true;
+                }
+            }
+
+            if (!$isLinkExpired && $album->event->user) {
+                $isStorageFull = isUserStorageFull($album->event->user);
+            }
+        }
+
+        $data = [
+            'albumId' => $album ? $album->id : null,
+            'eventUuid' => $album->event ? $album->event->uuid : null,
+            'eventName' => $album->event ? $album->event->name : 'Not Available',
+            'albumName' => $album ? $album->name : 'Not Available',
+            'startTime' => $uploaderLink && $uploaderLink->start ? Carbon::parse($uploaderLink->start)->format('M d, Y h:i A') : null,
+            'endTime' => $uploaderLink && $uploaderLink->end ? Carbon::parse($uploaderLink->end)->format('M d, Y h:i A') : null,
+            'isUserValidated' => $isUserValidated,
+            'isStorageFull' => $isStorageFull,
+            'isLinkExpired' => $isLinkExpired,
+        ];
+
+        return view('faceFinder.uploader', ['data' => $data]);
+    }
+
+    public function checkPasscode(Request $request)
+    {
+        $validate = $request->validate([
+            'passcode' => 'required|string|max:255',
+            'albumId' => 'required|integer',
+        ]);
+
+        $passcode = $validate['passcode'];
+        $albumId = $validate['albumId'];
+
+        $album = Album::find($albumId);
+        $getPasscode = UploaderLink::where('album_id', $album->id)->first();
+
+        if($getPasscode && $getPasscode->passcode === $passcode){
+            return redirect()->route('face_finder.uploader.show', [
+                'uuid' => $album->event->uuid,
+                'albumId' => base64_encode($album->id)
+            ])->cookie("uploader_passcode", base64_encode($getPasscode->passcode), 720);
+        } else {
+            return redirect()->back()->withErrors(['passcode' => 'Invalid passcode. Please try again.']);
+        }
+
+    }
 }

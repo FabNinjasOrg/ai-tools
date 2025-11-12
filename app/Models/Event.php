@@ -11,7 +11,7 @@ class Event extends Model
     protected $table = 'events';
 
     protected $fillable = [
-        'user_id', 'uuid', 'name', 'zip_filename', 'zip_path', 'zip_size_bytes', 'photos_count', 'public_url', 'uploader_url', 'upload_status',
+        'user_id', 'uuid', 'name', 'zip_filename', 'zip_path', 'zip_size_bytes', 'photos_count', 'public_url', 'upload_status',
     ];
 
     public function photos(): HasMany
@@ -37,5 +37,10 @@ class Event extends Model
     public function scopeOwnedBy($query, $userId)
     {
         return $query->where('user_id', $userId);
+    }
+
+    public function albums(): HasMany
+    {
+        return $this->hasMany(Album::class);
     }
 }
