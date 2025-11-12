@@ -188,6 +188,7 @@
                     uppyManager = new window.UppyUploadManager({
                         container: this.$refs.uppyContainer,
                         inline: true,
+                        height: 300,
                         hideUploadButton: true,
                         onError: (message) => {
                             self.$store.messages.showError(message);

@@ -9,7 +9,8 @@ class UppyUploadManager {
             hideUploadButton = null,
             onUpload = null,
             onSuccess = null,
-            onError = null
+            onError = null,
+            height = null
         } = config;
 
         this.container = container;
@@ -17,6 +18,7 @@ class UppyUploadManager {
         this.onUpload = onUpload;
         this.onSuccess = onSuccess;
         this.onError = onError;
+        this.height = height;
         this.uppy = null;
         this.isUploading = false;
 
@@ -45,7 +47,7 @@ class UppyUploadManager {
             target: this.container,
             inline: inline,
             width: '100%',
-            height: inline ? 400 : 450,
+            height: this.height !== null ? this.height : (inline ? 400 : 450),
             hideUploadButton: shouldHideUploadButton,
             proudlyDisplayPoweredByUppy: false,
             showProgressDetails: true,

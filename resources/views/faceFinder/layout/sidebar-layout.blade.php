@@ -156,12 +156,6 @@
                 <div class="px-6 lg:px-8 pt-6 lg:pt-8">
                     <!-- Success Message -->
                     <div x-show="$store.messages.success"
-                         x-transition:enter="transition ease-out duration-300"
-                         x-transition:enter-start="opacity-0 transform translate-y-2"
-                         x-transition:enter-end="opacity-100 transform translate-y-0"
-                         x-transition:leave="transition ease-in duration-200"
-                         x-transition:leave-start="opacity-100"
-                         x-transition:leave-end="opacity-0"
                          class="mb-4 rounded-xl border border-green-200 border-l-4 border-l-green-400 bg-green-50 px-4 py-3 shadow-sm"
                          style="display: none;">
                         <div class="flex items-start gap-3 text-green-700">
@@ -177,12 +171,6 @@
 
                     <!-- Error Message -->
                     <div x-show="$store.messages.error"
-                         x-transition:enter="transition ease-out duration-300"
-                         x-transition:enter-start="opacity-0 transform translate-y-2"
-                         x-transition:enter-end="opacity-100 transform translate-y-0"
-                         x-transition:leave="transition ease-in duration-200"
-                         x-transition:leave-start="opacity-100"
-                         x-transition:leave-end="opacity-0"
                          class="mb-4 rounded-xl border border-red-200 border-l-4 border-l-red-400 bg-red-50 px-4 py-3 shadow-sm"
                          style="display: none;">
                         <div class="flex items-start gap-3 text-red-700">
@@ -198,12 +186,6 @@
 
                     <!-- Info Message -->
                     <div x-show="$store.messages.info"
-                         x-transition:enter="transition ease-out duration-300"
-                         x-transition:enter-start="opacity-0 transform translate-y-2"
-                         x-transition:enter-end="opacity-100 transform translate-y-0"
-                         x-transition:leave="transition ease-in duration-200"
-                         x-transition:leave-start="opacity-100"
-                         x-transition:leave-end="opacity-0"
                          class="mb-4 rounded-xl border border-blue-200 border-l-4 border-l-blue-400 bg-blue-50 px-4 py-3 shadow-sm"
                          style="display: none;">
                         <div class="flex items-start gap-3 text-blue-700">

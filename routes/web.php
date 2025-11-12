@@ -6,6 +6,7 @@ use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StorageController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\uploaderLinkController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken as MiddlewareVerifyCsrfToken;
 
@@ -50,8 +51,9 @@ Route::prefix('face-finder')->group(function () {
         // Album detail routes
         Route::get('albums/{id}', [FaceFinderController::class, 'albumShow'])->name('face_finder.albums.show');
         Route::get('albums/{id}/photos', [FaceFinderController::class, 'albumPhotos'])->name('face_finder.albums.photos');
-        Route::post('albums/{id}/create-uploader-link', [FaceFinderController::class, 'createUploaderLink'])->name('face_finder.albums.create_uploader_link');
-        Route::post('albums/{id}/update-uploader-link', [FaceFinderController::class, 'updateUploaderLink'])->name('face_finder.albums.update_uploader_link');
+        Route::post('albums/{id}/create-uploader-link', [uploaderLinkController::class, 'createUploaderLink'])->name('face_finder.albums.create_uploader_link');
+        Route::post('albums/{id}/update-uploader-link', [uploaderLinkController::class, 'updateUploaderLink'])->name('face_finder.albums.update_uploader_link');
+        Route::post('albums/share-uploader-link', [uploaderLinkController::class, 'shareUploaderLink'])->name('face_finder.albums.share_uploader_link');
         Route::get('buy-subscription', [FaceFinderController::class, 'buySubscription'])->name('face_finder.buy_subscription');
         Route::get('manage-subscription', [FaceFinderController::class, 'manageSubscription'])->name('face_finder.manage_subscription');
         Route::get('storage', [StorageController::class, 'index'])->name('face_finder.storage');
@@ -66,8 +68,8 @@ Route::prefix('face-finder')->group(function () {
         Route::get('billing-data', [SubscriptionController::class, 'billingData'])->name('face_finder.billing.data');
     });
 
-    Route::post('uploader/check-passcode', [FaceFinderController::class, 'checkPasscode'])->name('face_finder.uploader.check_passcode');
-    Route::get('uploader/{uuid}/{albumId}', [FaceFinderController::class, 'uploaderPage'])->name('face_finder.uploader.show');
+    Route::post('uploader/check-passcode', [uploaderLinkController::class, 'checkPasscode'])->name('face_finder.uploader.check_passcode');
+    Route::get('uploader/{uuid}/{albumId}', [uploaderLinkController::class, 'uploaderPage'])->name('face_finder.uploader.show');
     Route::post('events/{uuid}/upload-photos', [FaceFinderController::class, 'uploadPhotosForEvent'])->name('face_finder.events.upload_photos');
 });
 

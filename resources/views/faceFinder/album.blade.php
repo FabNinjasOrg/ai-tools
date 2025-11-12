@@ -51,10 +51,11 @@
 							class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200">
 							Cancel
 						</button>
-						<button type="submit"
-							class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700">
-							Send
-						</button>
+                        <button type="submit" :disabled="sendingEmail"
+                            class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span x-show="!sendingEmail">Send</span>
+                            <span x-show="sendingEmail">Sending...</span>
+                        </button>
 					</div>
 				</form>
 			</div>
@@ -382,6 +383,7 @@
                 showShareLinkModal: false,
                 shareEmails: '',
                 shareErrors: '',
+                sendingEmail: false,
                 photos: [],
                 page: 0,
                 perPage: 24,
@@ -453,8 +455,10 @@
                         }
                         const data = await response.json();
                         this.$store.messages.showSuccess(data.message || 'Photos uploaded successfully.');
+
                         uppyManager.closeModal();
                         uppyManager.reset();
+                        
                         this.photos = [];
                         this.page = 0;
                         this.hasMore = true;
@@ -507,7 +511,7 @@
                     return `${base}?${params.toString()}`;
                 },
 
-                handleShareLinkSubmit() {
+                async handleShareLinkSubmit() {
                     const raw = this.shareEmails || '';
                     const emails = raw.split(',').map(e => e.trim()).filter(Boolean);
                     if (emails.length === 0) {
@@ -521,9 +525,37 @@
                         return;
                     }
                     this.shareErrors = '';
-                    this.$store.messages.showSuccess('Validated. (Email sending not yet implemented.)');
-                    this.showShareLinkModal = false;
-                    this.shareEmails = '';
+                    this.sendingEmail = true;
+
+                    try {
+                        const response = await fetch(
+                            '{{ route('face_finder.albums.share_uploader_link') }}',
+                            {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                },
+                                body: JSON.stringify({
+                                    emails: emails,
+                                    album_id: this.albumId
+                                })
+                            }
+                        );
+
+                        if (response.ok) {
+                            this.$store.messages.showSuccess('Uploader link shared successfully.');
+                            this.showShareLinkModal = false;
+                            this.shareEmails = '';
+                        } else {
+                            this.shareErrors = 'Failed to share uploader link. Please try again.';
+                        }
+                    } catch (error) {
+                        this.shareErrors = 'An error occurred. Please try again.';
+                    } finally {
+                        this.sendingEmail = false;
+                    }
                 },
             }
         }
