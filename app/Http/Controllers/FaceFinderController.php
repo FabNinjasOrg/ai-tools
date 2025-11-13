@@ -101,6 +101,7 @@ class FaceFinderController extends Controller
 
         return view('faceFinder.event', [
             'uuid' => $uuid,
+            'eventId' => $event ? $event->id : null,
             'attemptTotal' => $attemptTotal,
             'attemptUniquePhones' => $attemptUniquePhones,
             'noMatchCount' => $noMatchCount
@@ -596,6 +597,80 @@ class FaceFinderController extends Controller
         ]);
     }
 
+    public function allAlbums()
+    {
+        return view('faceFinder.albums');
+    }
+
+    public function loadAllAlbums(Request $request)
+    {
+        $user = Auth::user();
+
+        // Get all events for the user
+        $events = Event::query()
+            ->where('user_id', $user->id)
+            ->orderByDesc('id')
+            ->get(['id','name','uuid']);
+
+        $eventIds = $events->pluck('id');
+
+        // Build albums query
+        $albumsQuery = Album::query()
+            ->whereIn('event_id', $eventIds)
+            ->with('event:id,name,uuid');
+
+        // Apply event filter if provided
+        if ($request->has('event_id') && $request->event_id) {
+            $albumsQuery->where('event_id', $request->event_id);
+        }
+
+        $albums = $albumsQuery->orderByDesc('id')->get(['id','event_id','name','created_at']);
+
+        return response()->json([
+            'events' => $events->map(function ($event) {
+                return [
+                    'id' => $event->id,
+                    'name' => $event->name,
+                    'uuid' => $event->uuid,
+                ];
+            }),
+            'albums' => $albums->map(function ($album) {
+                return [
+                    'id' => $album->id,
+                    'name' => $album->name,
+                    'event_name' => $album->event ? $album->event->name : 'Unknown Event',
+                    'event_uuid' => $album->event ? $album->event->uuid : null,
+                    'created_at' => $album->created_at,
+                ];
+            })
+        ]);
+    }
+
+    public function storeAlbum(Request $request)
+    {
+        $validated = $request->validate([
+            'event_id' => 'required|exists:events,id',
+            'album_name' => 'required|string|max:255',
+        ]);
+
+        $user = Auth::user();
+
+        $event = Event::query()
+            ->where('id', $validated['event_id'])
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        // Create the album
+        $album = Album::create([
+            'event_id' => $event->id,
+            'name' => $validated['album_name'],
+        ]);
+
+        return redirect()
+            ->route('face_finder.events.show', ['uuid' => $event->uuid])
+            ->with('success', 'Album created successfully.');
+    }
+
     public function albumShow(int $id)
     {
         $album = Album::query()->where('id', $id)->firstOrFail(['id','event_id','name','created_at']);
@@ -869,11 +944,6 @@ class FaceFinderController extends Controller
             Log::error('Bulk delete photos error', ['error' => $e->getMessage()]);
             return redirect()->back()->withErrors('Failed to delete photos. Please try again.');
         }
-    }
-
-    public function eventsCreate(Request $request)
-    {
-        return view('faceFinder.events-create');
     }
 
     public function storeEvent(Request $request)

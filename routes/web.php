@@ -38,7 +38,6 @@ Route::prefix('face-finder')->group(function () {
 
         // Events routes
         Route::get('events', [FaceFinderController::class, 'index'])->name('face_finder.events.index');
-        Route::get('events/create', [FaceFinderController::class, 'eventsCreate'])->name('face_finder.events.create');
         Route::get('load-events', [FaceFinderController::class, 'loadEvents'])->name('face_finder.load_events');
         Route::post('events/store-name', [FaceFinderController::class, 'storeEvent'])->name('face_finder.events.store_name');
         Route::get('events/{uuid}', [FaceFinderController::class, 'show'])->name('face_finder.events.show');
@@ -48,7 +47,10 @@ Route::prefix('face-finder')->group(function () {
         Route::get('events/{uuid}/upload-status', [FaceFinderController::class, 'zipfileUploadStatus'])->name('eventUploadStatus');
         Route::post('events/{uuid}/generate-public', [FaceFinderController::class, 'generatePublic'])->name('face_finder.events.generate_public');
         Route::delete('events/{uuid}', [FaceFinderController::class, 'deleteEvent'])->name('face_finder.events.delete');
-        // Album detail routes
+        // Album routes
+        Route::get('albums', [FaceFinderController::class, 'allAlbums'])->name('face_finder.albums.index');
+        Route::get('load-albums', [FaceFinderController::class, 'loadAllAlbums'])->name('face_finder.load_albums');
+        Route::post('albums/store', [FaceFinderController::class, 'storeAlbum'])->name('face_finder.albums.store');
         Route::get('albums/{id}', [FaceFinderController::class, 'albumShow'])->name('face_finder.albums.show');
         Route::get('albums/{id}/photos', [FaceFinderController::class, 'albumPhotos'])->name('face_finder.albums.photos');
         Route::post('albums/{id}/create-uploader-link', [uploaderLinkController::class, 'createUploaderLink'])->name('face_finder.albums.create_uploader_link');

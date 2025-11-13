@@ -118,7 +118,7 @@
                         <form method="POST" action="{{ route('face_finder.events.store_name') }}" class="space-y-5">
                             @csrf
                             <div>
-                                <label for="event_name" class="block text-sm font-medium text-slate-700">Event name</label>
+                                <label for="event_name" class="block text-sm font-medium text-slate-700">Event name <span class="text-red-500">*</span></label>
                                 <input
                                     type="text"
                                     id="event_name"
@@ -132,7 +132,7 @@
                                 @enderror
                             </div>
                             <div>
-                                <label for="album_name" class="block text-sm font-medium text-slate-700">Album name</label>
+                                <label for="album_name" class="block text-sm font-medium text-slate-700">Album name <span class="text-red-500">*</span></label>
                                 <input
                                     type="text"
                                     id="album_name"

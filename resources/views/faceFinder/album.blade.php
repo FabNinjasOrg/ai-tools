@@ -16,6 +16,15 @@
                 >
                 <h1 x-text="albumName"></h1>
             </div>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('face_finder.albums.index') }}"
+                    class="px-4 py-2 rounded-xl bg-white border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 text-blue-600 font-medium text-sm inline-flex items-center gap-2 transition-all">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    All Albums
+                </a>
+            </div>
         </div>
 
 		@if(userHasAccessibility())
@@ -221,25 +230,34 @@
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <label class="block text-sm font-medium text-slate-700 mb-1">Start date &
-                                                time</label>
+                                                time <span class="text-red-500">*</span></label>
                                             <input type="datetime-local" name="start_at"
-                                                value="{{ $startAtLocal ?? ($uploaderLink->start ? \Carbon\Carbon::parse($uploaderLink->start)->format('Y-m-d\TH:i') : '') }}"
-                                                class="w-full rounded-xl border-slate-300 focus:border-green-500 focus:ring-green-500">
+                                                value="{{ old('start_at', $startAtLocal ?? ($uploaderLink->start ? \Carbon\Carbon::parse($uploaderLink->start)->format('Y-m-d\TH:i') : '')) }}"
+                                                class="w-full rounded-xl border-slate-300 focus:border-green-500 focus:ring-green-500 @error('start_at') border-red-500 @enderror">
+                                            @error('start_at')
+                                                <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                                            @enderror
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-slate-700 mb-1">End date &
-                                                time</label>
+                                                time <span class="text-red-500">*</span></label>
                                             <input type="datetime-local" name="end_at"
-                                                value="{{ $endAtLocal ?? ($uploaderLink->end ? \Carbon\Carbon::parse($uploaderLink->end)->format('Y-m-d\TH:i') : '') }}"
-                                                class="w-full rounded-xl border-slate-300 focus:border-green-500 focus:ring-green-500">
+                                                value="{{ old('end_at', $endAtLocal ?? ($uploaderLink->end ? \Carbon\Carbon::parse($uploaderLink->end)->format('Y-m-d\TH:i') : '')) }}"
+                                                class="w-full rounded-xl border-slate-300 focus:border-green-500 focus:ring-green-500 @error('end_at') border-red-500 @enderror">
+                                            @error('end_at')
+                                                <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                                            @enderror
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-700 mb-1">Pass code</label>
+                                        <label class="block text-sm font-medium text-slate-700 mb-1">Pass code <span class="text-red-500">*</span></label>
                                         <input type="text" name="passcode"
                                             placeholder="Enter a pass code required to access the link"
-                                            value="{{ $uploaderLink->passcode }}"
-                                            class="w-full rounded-xl border-slate-300 focus:border-green-500 focus:ring-green-500">
+                                            value="{{ old('passcode', $uploaderLink->passcode) }}"
+                                            class="w-full rounded-xl border-slate-300 focus:border-green-500 focus:ring-green-500 @error('passcode') border-red-500 @enderror">
+                                        @error('passcode')
+                                            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                                        @enderror
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-slate-700 mb-2">Status</label>
@@ -247,13 +265,13 @@
                                             <label class="inline-flex items-center gap-2 cursor-pointer">
                                                 <input type="radio" name="status" value="active"
                                                     class="text-green-600 focus:ring-green-500"
-                                                    {{ $uploaderLink->status === 'active' ? 'checked' : '' }}>
+                                                    {{ old('status', $uploaderLink->status) === 'active' ? 'checked' : '' }}>
                                                 <span class="text-sm text-slate-700">Active</span>
                                             </label>
                                             <label class="inline-flex items-center gap-2 cursor-pointer">
                                                 <input type="radio" name="status" value="inactive"
                                                     class="text-green-600 focus:ring-green-500"
-                                                    {{ $uploaderLink->status === 'inactive' ? 'checked' : '' }}>
+                                                    {{ old('status', $uploaderLink->status) === 'inactive' ? 'checked' : '' }}>
                                                 <span class="text-sm text-slate-700">Inactive</span>
                                             </label>
                                         </div>
@@ -296,33 +314,42 @@
                     <div class="space-y-4">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Start date & time</label>
-                                <input type="datetime-local" name="start_at"
-                                    class="w-full rounded-xl border-slate-300 focus:border-green-500 focus:ring-green-500">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Start date & time <span class="text-red-500">*</span></label>
+                                <input type="datetime-local" name="start_at" value="{{ old('start_at') }}"
+                                    class="w-full rounded-xl border-slate-300 focus:border-green-500 focus:ring-green-500 @error('start_at') border-red-500 @enderror">
+                                @error('start_at')
+                                    <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">End date & time</label>
-                                <input type="datetime-local" name="end_at"
-                                    class="w-full rounded-xl border-slate-300 focus:border-green-500 focus:ring-green-500">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">End date & time <span class="text-red-500">*</span></label>
+                                <input type="datetime-local" name="end_at" value="{{ old('end_at') }}"
+                                    class="w-full rounded-xl border-slate-300 focus:border-green-500 focus:ring-green-500 @error('end_at') border-red-500 @enderror">
+                                @error('end_at')
+                                    <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Pass code</label>
-                            <input type="text" name="passcode"
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Pass code <span class="text-red-500">*</span></label>
+                            <input type="text" name="passcode" value="{{ old('passcode') }}"
                                 placeholder="Enter a pass code required to access the link"
-                                class="w-full rounded-xl border-slate-300 focus:border-green-500 focus:ring-green-500">
+                                class="w-full rounded-xl border-slate-300 focus:border-green-500 focus:ring-green-500 @error('passcode') border-red-500 @enderror">
+                            @error('passcode')
+                                <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                            @enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2">Status</label>
                             <div class="flex items-center gap-6">
                                 <label class="inline-flex items-center gap-2 cursor-pointer">
                                     <input type="radio" name="status" value="active"
-                                        class="text-green-600 focus:ring-green-500" checked>
+                                        class="text-green-600 focus:ring-green-500" {{ old('status', 'active') == 'active' ? 'checked' : '' }}>
                                     <span class="text-sm text-slate-700">Active</span>
                                 </label>
                                 <label class="inline-flex items-center gap-2 cursor-pointer">
                                     <input type="radio" name="status" value="inactive"
-                                        class="text-green-600 focus:ring-green-500">
+                                        class="text-green-600 focus:ring-green-500" {{ old('status') == 'inactive' ? 'checked' : '' }}>
                                     <span class="text-sm text-slate-700">Inactive</span>
                                 </label>
                             </div>
@@ -387,7 +414,6 @@
                 eventUuid,
                 albumName,
                 eventName: '{{ $eventName ?? '' }}',
-                uploaderLinks: [],
                 showCreateLinkModal: false,
                 showShareLinkModal: false,
                 shareEmails: '',
@@ -404,6 +430,10 @@
                 async init() {
                     await this.loadMore();
                     this.initUppy();
+
+                    @if($errors->any() && empty($uploaderLink))
+                        this.showCreateLinkModal = true;
+                    @endif
                 },
 
                 initUppy() {

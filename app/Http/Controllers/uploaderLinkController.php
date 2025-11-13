@@ -18,9 +18,9 @@ class uploaderLinkController extends Controller
         $validated = $request->validate([
             'album_id' => ['required', 'integer', 'in:'.$album->id],
             'event_uuid' => ['required'],
-            'start_at' => ['nullable', 'date'],
-            'end_at' => ['nullable', 'date', 'after_or_equal:start_at'],
-            'passcode' => ['nullable', 'string', 'max:255'],
+            'start_at' => ['required', 'date'],
+            'end_at' => ['required', 'date', 'after_or_equal:start_at'],
+            'passcode' => ['required', 'string', 'max:255'],
             'status' => ['required', 'in:active,inactive'],
             'timezone' => ['nullable', 'string'],
         ]);
@@ -34,17 +34,17 @@ class uploaderLinkController extends Controller
 
         // Convert times to UTC using session timezone
         $timezone = $validated['timezone'] ?? session('uploader_link_timezone');
-        $startUtc = isset($validated['start_at']) && $timezone
+        $startUtc = $timezone
             ? Carbon::parse($validated['start_at'], $timezone)->utc()
-            : ($validated['start_at'] ?? null);
-        $endUtc = isset($validated['end_at']) && $timezone
+            : Carbon::parse($validated['start_at'])->utc();
+        $endUtc = $timezone
             ? Carbon::parse($validated['end_at'], $timezone)->utc()
-            : ($validated['end_at'] ?? null);
+            : Carbon::parse($validated['end_at'])->utc();
 
         UploaderLink::create([
             'album_id' => $album->id,
             'url' => $url,
-            'passcode' => $validated['passcode'] ?? null,
+            'passcode' => $validated['passcode'],
             'start' => $startUtc,
             'end' => $endUtc,
             'status' => $validated['status'],
@@ -61,24 +61,24 @@ class uploaderLinkController extends Controller
         $link = UploaderLink::query()->where('album_id', $album->id)->latest('id')->firstOrFail();
 
         $validated = $request->validate([
-            'start_at' => ['nullable', 'date'],
-            'end_at' => ['nullable', 'date', 'after_or_equal:start_at'],
-            'passcode' => ['nullable', 'string', 'max:255'],
+            'start_at' => ['required', 'date'],
+            'end_at' => ['required', 'date', 'after_or_equal:start_at'],
+            'passcode' => ['required', 'string', 'max:255'],
             'status' => ['required', 'in:active,inactive'],
         ]);
 
         // Convert times to UTC using session timezone
         $timezone = session('uploader_link_timezone');
-        $startUtc = isset($validated['start_at']) && $timezone
+        $startUtc = $timezone
             ? Carbon::parse($validated['start_at'], $timezone)->utc()
-            : ($validated['start_at'] ?? null);
-        $endUtc = isset($validated['end_at']) && $timezone
+            : Carbon::parse($validated['start_at'])->utc();
+        $endUtc = $timezone
             ? Carbon::parse($validated['end_at'], $timezone)->utc()
-            : ($validated['end_at'] ?? null);
+            : Carbon::parse($validated['end_at'])->utc();
 
         $link->start = $startUtc;
         $link->end = $endUtc;
-        $link->passcode = $validated['passcode'] ?? null;
+        $link->passcode = $validated['passcode'];
         $link->status = $validated['status'];
         $link->save();
 
