@@ -223,14 +223,14 @@
                                             <label class="block text-sm font-medium text-slate-700 mb-1">Start date &
                                                 time</label>
                                             <input type="datetime-local" name="start_at"
-                                                value="{{ $uploaderLink->start ? \Carbon\Carbon::parse($uploaderLink->start)->format('Y-m-d\TH:i') : '' }}"
+                                                value="{{ $startAtLocal ?? ($uploaderLink->start ? \Carbon\Carbon::parse($uploaderLink->start)->format('Y-m-d\TH:i') : '') }}"
                                                 class="w-full rounded-xl border-slate-300 focus:border-green-500 focus:ring-green-500">
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-slate-700 mb-1">End date &
                                                 time</label>
                                             <input type="datetime-local" name="end_at"
-                                                value="{{ $uploaderLink->end ? \Carbon\Carbon::parse($uploaderLink->end)->format('Y-m-d\TH:i') : '' }}"
+                                                value="{{ $endAtLocal ?? ($uploaderLink->end ? \Carbon\Carbon::parse($uploaderLink->end)->format('Y-m-d\TH:i') : '') }}"
                                                 class="w-full rounded-xl border-slate-300 focus:border-green-500 focus:ring-green-500">
                                         </div>
                                     </div>
@@ -289,9 +289,10 @@
                     </button>
                 </div>
                 <form method="POST" action="{{ route('face_finder.albums.create_uploader_link', ['id' => $albumId]) }}"
-                    class="p-5">
+                    class="p-5" onsubmit="setTimezone(this)">
                     @csrf
                     <input type="hidden" name="album_id" :value="albumId">
+                    <input type="hidden" name="timezone" id="timezone-create">
                     <div class="space-y-4">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
@@ -371,6 +372,14 @@
 @section('scripts')
     @parent
     <script>
+        function setTimezone(form) {
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const timezoneInput = form.querySelector('input[name="timezone"]');
+            if (timezoneInput) {
+                timezoneInput.value = timezone;
+            }
+        }
+
         function albumPage(albumId, eventUuid, albumName) {
             let uppyManager = null;
             return {
@@ -458,7 +467,7 @@
 
                         uppyManager.closeModal();
                         uppyManager.reset();
-                        
+
                         this.photos = [];
                         this.page = 0;
                         this.hasMore = true;

@@ -22,16 +22,31 @@ class uploaderLinkController extends Controller
             'end_at' => ['nullable', 'date', 'after_or_equal:start_at'],
             'passcode' => ['nullable', 'string', 'max:255'],
             'status' => ['required', 'in:active,inactive'],
+            'timezone' => ['nullable', 'string'],
         ]);
 
+        // Save timezone in session
+        if (isset($validated['timezone'])) {
+            session(['uploader_link_timezone' => $validated['timezone']]);
+        }
+
         $url = route('face_finder.uploader.show', ['uuid' => $request->event_uuid, 'albumId' => base64_encode($album->id)]);
+
+        // Convert times to UTC using session timezone
+        $timezone = $validated['timezone'] ?? session('uploader_link_timezone');
+        $startUtc = isset($validated['start_at']) && $timezone
+            ? Carbon::parse($validated['start_at'], $timezone)->utc()
+            : ($validated['start_at'] ?? null);
+        $endUtc = isset($validated['end_at']) && $timezone
+            ? Carbon::parse($validated['end_at'], $timezone)->utc()
+            : ($validated['end_at'] ?? null);
 
         UploaderLink::create([
             'album_id' => $album->id,
             'url' => $url,
             'passcode' => $validated['passcode'] ?? null,
-            'start' => $validated['start_at'] ?? null,
-            'end' => $validated['end_at'] ?? null,
+            'start' => $startUtc,
+            'end' => $endUtc,
             'status' => $validated['status'],
         ]);
 
@@ -52,8 +67,17 @@ class uploaderLinkController extends Controller
             'status' => ['required', 'in:active,inactive'],
         ]);
 
-        $link->start = $validated['start_at'] ?? null;
-        $link->end = $validated['end_at'] ?? null;
+        // Convert times to UTC using session timezone
+        $timezone = session('uploader_link_timezone');
+        $startUtc = isset($validated['start_at']) && $timezone
+            ? Carbon::parse($validated['start_at'], $timezone)->utc()
+            : ($validated['start_at'] ?? null);
+        $endUtc = isset($validated['end_at']) && $timezone
+            ? Carbon::parse($validated['end_at'], $timezone)->utc()
+            : ($validated['end_at'] ?? null);
+
+        $link->start = $startUtc;
+        $link->end = $endUtc;
         $link->passcode = $validated['passcode'] ?? null;
         $link->status = $validated['status'];
         $link->save();
@@ -84,9 +108,9 @@ class uploaderLinkController extends Controller
 
         if ($isUserValidated && $album && $album->event) {
             if ($uploaderLink) {
-                $now = Carbon::now();
-                $startDate = $uploaderLink->start ? Carbon::parse($uploaderLink->start) : null;
-                $endDate = $uploaderLink->end ? Carbon::parse($uploaderLink->end) : null;
+                $now = Carbon::now('UTC');
+                $startDate = $uploaderLink->start ? Carbon::parse($uploaderLink->start)->utc() : null;
+                $endDate = $uploaderLink->end ? Carbon::parse($uploaderLink->end)->utc() : null;
 
                 if (($startDate && $now->lt($startDate)) || ($endDate && $now->gt($endDate))) {
                     $isLinkExpired = true;
@@ -98,13 +122,31 @@ class uploaderLinkController extends Controller
             }
         }
 
+        // Get timezone from cookie and convert UTC times to user's timezone
+        $timezone = $request->cookie('uploader_timezone');
+        $startTime = null;
+        $endTime = null;
+
+        if ($uploaderLink) {
+            if ($uploaderLink->start) {
+                $startTime = $timezone
+                    ? Carbon::parse($uploaderLink->start)->setTimezone($timezone)->format('M d, Y h:i A')
+                    : Carbon::parse($uploaderLink->start)->format('M d, Y h:i A');
+            }
+            if ($uploaderLink->end) {
+                $endTime = $timezone
+                    ? Carbon::parse($uploaderLink->end)->setTimezone($timezone)->format('M d, Y h:i A')
+                    : Carbon::parse($uploaderLink->end)->format('M d, Y h:i A');
+            }
+        }
+
         $data = [
             'albumId' => $album ? $album->id : null,
             'eventUuid' => $album->event ? $album->event->uuid : null,
             'eventName' => $album->event ? $album->event->name : 'Not Available',
             'albumName' => $album ? $album->name : 'Not Available',
-            'startTime' => $uploaderLink && $uploaderLink->start ? Carbon::parse($uploaderLink->start)->format('M d, Y h:i A') : null,
-            'endTime' => $uploaderLink && $uploaderLink->end ? Carbon::parse($uploaderLink->end)->format('M d, Y h:i A') : null,
+            'startTime' => $startTime,
+            'endTime' => $endTime,
             'isUserValidated' => $isUserValidated,
             'isStorageFull' => $isStorageFull,
             'isLinkExpired' => $isLinkExpired,
@@ -118,6 +160,7 @@ class uploaderLinkController extends Controller
         $validate = $request->validate([
             'passcode' => 'required|string|max:255',
             'albumId' => 'required|integer',
+            'timezone' => ['nullable', 'string'],
         ]);
 
         $passcode = $validate['passcode'];
@@ -127,10 +170,17 @@ class uploaderLinkController extends Controller
         $getPasscode = UploaderLink::where('album_id', $album->id)->first();
 
         if($getPasscode && $getPasscode->passcode === $passcode){
-            return redirect()->route('face_finder.uploader.show', [
+            $response = redirect()->route('face_finder.uploader.show', [
                 'uuid' => $album->event->uuid,
                 'albumId' => base64_encode($album->id)
             ])->cookie("uploader_passcode", base64_encode($getPasscode->passcode), 720);
+
+            // Set timezone cookie if provided
+            if (isset($validate['timezone'])) {
+                $response->cookie("uploader_timezone", $validate['timezone'], 720);
+            }
+
+            return $response;
         } else {
             return redirect()->back()->withErrors(['passcode' => 'Invalid passcode. Please try again.']);
         }

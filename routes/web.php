@@ -4,6 +4,7 @@ use App\Http\Controllers\ModelController;
 use App\Http\Controllers\FaceFinderController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\publicLinkController;
 use App\Http\Controllers\StorageController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\uploaderLinkController;
@@ -38,16 +39,15 @@ Route::prefix('face-finder')->group(function () {
         // Events routes
         Route::get('events', [FaceFinderController::class, 'index'])->name('face_finder.events.index');
         Route::get('events/create', [FaceFinderController::class, 'eventsCreate'])->name('face_finder.events.create');
-        Route::get('load-events', [FaceFinderController::class, 'loadAlbums'])->name('face_finder.load_events');
+        Route::get('load-events', [FaceFinderController::class, 'loadEvents'])->name('face_finder.load_events');
         Route::post('events/store-name', [FaceFinderController::class, 'storeEvent'])->name('face_finder.events.store_name');
-        // Route::post('events', [FaceFinderController::class, 'storeZip'])->name('face_finder.events.store');
         Route::get('events/{uuid}', [FaceFinderController::class, 'show'])->name('face_finder.events.show');
         Route::get('events/{uuid}/photos', [FaceFinderController::class, 'photos'])->name('face_finder.events.photos');
         Route::get('events/{uuid}/albums', [FaceFinderController::class, 'albums'])->name('face_finder.events.albums');
         Route::delete('events/{uuid}/bulk-delete-photos', [FaceFinderController::class, 'bulkDeletePhotos'])->name('face_finder.events.bulk_delete_photos');
         Route::get('events/{uuid}/upload-status', [FaceFinderController::class, 'zipfileUploadStatus'])->name('eventUploadStatus');
         Route::post('events/{uuid}/generate-public', [FaceFinderController::class, 'generatePublic'])->name('face_finder.events.generate_public');
-        Route::delete('events/{uuid}', [FaceFinderController::class, 'deleteAlbum'])->name('face_finder.events.delete');
+        Route::delete('events/{uuid}', [FaceFinderController::class, 'deleteEvent'])->name('face_finder.events.delete');
         // Album detail routes
         Route::get('albums/{id}', [FaceFinderController::class, 'albumShow'])->name('face_finder.albums.show');
         Route::get('albums/{id}/photos', [FaceFinderController::class, 'albumPhotos'])->name('face_finder.albums.photos');
@@ -74,12 +74,12 @@ Route::prefix('face-finder')->group(function () {
 });
 
 Route::prefix('face-finder/public')->group(function () {
-    Route::post('find-photos', [FaceFinderController::class, 'findPhotos'])->name('face_finder.public.find_photos');
-    Route::get('{uuid}/matched-photos', [FaceFinderController::class, 'loadMatchedPhotos'])->name('face_finder.public.matched_photos');
-    Route::post('{uuid}/otp-attempt', [FaceFinderController::class, 'logOtpAttempt'])->name('face_finder.public.otp_attempt');
-    Route::post('{uuid}/otp-verified', [FaceFinderController::class, 'checkOtpSession'])->name('face_finder.public.otp_verified');
-    Route::post('{uuid}/download-matched-photos-zip', [FaceFinderController::class, 'downloadMatchedPhotosZip'])->name('face_finder.public.download_matched_photos_zip');
-    Route::get('{name}/{uuid}', [FaceFinderController::class, 'publicAlbumPage'])->name('face_finder.public.show');
+    Route::post('find-photos', [publicLinkController::class, 'findPhotos'])->name('face_finder.public.find_photos');
+    Route::get('{uuid}/matched-photos', [publicLinkController::class, 'loadMatchedPhotos'])->name('face_finder.public.matched_photos');
+    Route::post('{uuid}/otp-attempt', [publicLinkController::class, 'logOtpAttempt'])->name('face_finder.public.otp_attempt');
+    Route::post('{uuid}/otp-verified', [publicLinkController::class, 'checkOtpSession'])->name('face_finder.public.otp_verified');
+    Route::post('{uuid}/download-matched-photos-zip', [publicLinkController::class, 'downloadMatchedPhotosZip'])->name('face_finder.public.download_matched_photos_zip');
+    Route::get('{name}/{uuid}', [publicLinkController::class, 'publicEventPage'])->name('face_finder.public.show');
 });
 
 // Authentication routes (added by Laravel Breeze) with face-finder URL prefix

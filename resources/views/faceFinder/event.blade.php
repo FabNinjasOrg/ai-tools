@@ -51,20 +51,7 @@
 
             <!-- Tab: Albums -->
             <div x-show="activeTab === 'albums'" class="p-6">
-                <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    <div class="p-5 border-b border-slate-200">
-                        <div class="flex items-center gap-3">
-                            <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 text-white inline-flex items-center justify-center">
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h4l2-2h6l2 2h4v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h2 class="text-lg font-semibold text-slate-900">Albums</h2>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="p-5">
+                    <div>
                         <template x-if="albumsLoading">
                             <div class="w-full flex items-center gap-3 text-slate-600">
                                 <div class="h-5 w-5 rounded-full border-2 border-slate-200 border-t-emerald-600 animate-spin"></div>
@@ -100,7 +87,6 @@
                             </template>
                         </div>
                     </div>
-                </div>
             </div>
             <!-- Tab 2: Links -->
             <div x-show="activeTab === 'links'" class="p-6">

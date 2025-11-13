@@ -51,7 +51,7 @@ async def image_embedding(file: UploadFile = File(...)):
 @app.post("/compare-face/")
 async def compare_face(
     file: UploadFile = File(...),
-    db_embeddings: str = Form(...)
+    embeddings: UploadFile = File(...)
 ):
     try:
         contents = await file.read()
@@ -68,8 +68,9 @@ async def compare_face(
         # Take first detected face embedding from uploaded image
         new_embedding = faces[0].embedding
 
-        # Parse DB embeddings (array of arrays of embeddings)
-        per_photo_faces = json.loads(db_embeddings)
+        # Read and parse embeddings from JSON file
+        embeddings_content = await embeddings.read()
+        per_photo_faces = json.loads(embeddings_content)
 
         results = []
         for idx, photo_embeddings in enumerate(per_photo_faces):

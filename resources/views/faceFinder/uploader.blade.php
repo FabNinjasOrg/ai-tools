@@ -151,8 +151,9 @@
                         <p class="text-sm text-slate-600 mt-1">Enter pass code to continue, which is share in the email.</p>
                     </div>
                     <div class="p-6">
-                        <form method="POST" action="{{ route('face_finder.uploader.check_passcode') }}" class="space-y-5">
+                        <form method="POST" action="{{ route('face_finder.uploader.check_passcode') }}" class="space-y-5" onsubmit="setTimezone(this)">
                             @csrf
+                            <input type="hidden" name="timezone" id="timezone-passcode">
                             <div>
                                 <label for="passcode" class="block text-sm font-semibold text-slate-700 mb-3">
                                     Pass Code
@@ -208,6 +209,14 @@
 @section('scripts')
 @parent
     <script>
+        function setTimezone(form) {
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const timezoneInput = form.querySelector('input[name="timezone"]');
+            if (timezoneInput) {
+                timezoneInput.value = timezone;
+            }
+        }
+
         function showSuccess(message) {
             const main = document.querySelector('[x-ref="messageContainer"]');
             if (main && Alpine.$data(main)) {

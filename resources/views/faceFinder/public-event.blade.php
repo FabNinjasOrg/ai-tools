@@ -1,7 +1,7 @@
 @extends('faceFinder.app')
 
 @section('content')
-    @if (empty($albumName))
+    @if (empty($eventName))
         <div class="max-w-7xl mx-auto px-6 py-12">
             <div class="rounded-2xl border border-red-200 bg-red-50 text-red-800 px-4 py-4">
                 <div class="flex items-start gap-3">
@@ -64,7 +64,7 @@
             <div class="mb-6">
                 <h1
                     class="text-3xl md:text-5xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                    {{ $albumName }}</h1>
+                    {{ $eventName }}</h1>
                 <div class="mt-2 text-[13px] text-slate-600 inline-flex items-center gap-2 mb-6">
                     <span
                         class="h-5 w-5 rounded-full bg-emerald-100 text-emerald-700 inline-flex items-center justify-center font-semibold">i</span>
@@ -429,6 +429,8 @@
                         this.matchedPhotosPage = 1;
                     }
 
+                    this.setInfo('Loading your matched photo…');
+
                     try {
                         const url = `{{ route('face_finder.public.matched_photos', ['uuid' => $uuid]) }}?page=${this.matchedPhotosPage}`;
                         const response = await fetch(url, {
@@ -450,6 +452,8 @@
                         }
                     } catch (e) {
                         console.warn('Failed to load matched photos');
+                    } finally {
+                        this.infoMessage = '';
                     }
                 },
 
