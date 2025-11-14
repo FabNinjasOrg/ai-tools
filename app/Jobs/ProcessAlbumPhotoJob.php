@@ -10,10 +10,13 @@ use ZipArchive;
 use Illuminate\Support\Facades\Log;
 use App\Models\Photo;
 use Illuminate\Bus\Batchable;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class ProcessAlbumPhotoJob implements ShouldQueue
 {
-    use Queueable, Batchable;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Batchable;
 
     public int $eventId;
     public int $albumId;

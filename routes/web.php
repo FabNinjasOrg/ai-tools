@@ -44,7 +44,6 @@ Route::prefix('face-finder')->group(function () {
         Route::get('events/{uuid}/photos', [FaceFinderController::class, 'photos'])->name('face_finder.events.photos');
         Route::get('events/{uuid}/albums', [FaceFinderController::class, 'albums'])->name('face_finder.events.albums');
         Route::delete('events/{uuid}/bulk-delete-photos', [FaceFinderController::class, 'bulkDeletePhotos'])->name('face_finder.events.bulk_delete_photos');
-        Route::get('events/{uuid}/upload-status', [FaceFinderController::class, 'zipfileUploadStatus'])->name('eventUploadStatus');
         Route::post('events/{uuid}/generate-public', [FaceFinderController::class, 'generatePublic'])->name('face_finder.events.generate_public');
         Route::delete('events/{uuid}', [FaceFinderController::class, 'deleteEvent'])->name('face_finder.events.delete');
         // Album routes
@@ -53,6 +52,7 @@ Route::prefix('face-finder')->group(function () {
         Route::post('albums/store', [FaceFinderController::class, 'storeAlbum'])->name('face_finder.albums.store');
         Route::get('albums/{id}', [FaceFinderController::class, 'albumShow'])->name('face_finder.albums.show');
         Route::get('albums/{id}/photos', [FaceFinderController::class, 'albumPhotos'])->name('face_finder.albums.photos');
+        Route::delete('albums/{id}', [FaceFinderController::class, 'deleteAlbum'])->name('face_finder.albums.delete');
         Route::post('albums/{id}/create-uploader-link', [uploaderLinkController::class, 'createUploaderLink'])->name('face_finder.albums.create_uploader_link');
         Route::post('albums/{id}/update-uploader-link', [uploaderLinkController::class, 'updateUploaderLink'])->name('face_finder.albums.update_uploader_link');
         Route::post('albums/share-uploader-link', [uploaderLinkController::class, 'shareUploaderLink'])->name('face_finder.albums.share_uploader_link');
@@ -68,6 +68,8 @@ Route::prefix('face-finder')->group(function () {
         Route::post('cancel-subscription', [SubscriptionController::class, 'cancelSubscription'])->name('face_finder.subscription.cancel');
         Route::get('billing', [SubscriptionController::class, 'billing'])->name('face_finder.billing');
         Route::get('billing-data', [SubscriptionController::class, 'billingData'])->name('face_finder.billing.data');
+
+        Route::post('check-batch-status', [FaceFinderController::class, 'checkBatchStatus'])->name('face_finder.check_batch_status');
     });
 
     Route::post('uploader/check-passcode', [uploaderLinkController::class, 'checkPasscode'])->name('face_finder.uploader.check_passcode');

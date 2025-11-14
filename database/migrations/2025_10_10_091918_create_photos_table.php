@@ -20,6 +20,7 @@ return new class extends Migration
             $table->json('embedding_json')->nullable();
             $table->unsignedBigInteger('size_bytes')->default(0);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

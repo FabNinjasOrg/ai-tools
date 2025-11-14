@@ -65,6 +65,10 @@
                         this.info = '';
                     }
                 });
+                Alpine.store('uploading_data', {
+                    polling: false,
+                    upload_session_ids: []
+                });
             });
         </script>
     </head>

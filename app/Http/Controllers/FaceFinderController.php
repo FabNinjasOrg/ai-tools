@@ -10,6 +10,7 @@ use App\Models\OtpVerificationAttempt;
 use App\Models\SubscriptionPlan;
 use App\Jobs\ProcessAlbumPhotoJob;
 use App\Jobs\ProcessDirectPhotoUploadJob;
+use App\Models\UploadSession;
 use App\Services\CalculateUserStorageService;
 use Illuminate\Http\Request;
 use Auth;
@@ -20,6 +21,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use ZipArchive;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class FaceFinderController extends Controller
@@ -142,17 +144,6 @@ class FaceFinderController extends Controller
         ]);
     }
 
-    public function zipfileUploadStatus(string $uuid)
-    {
-        $event = Event::query()->where('uuid', $uuid)->first();
-
-        if (!$event) {
-            return response()->json(['message' => 'Event not found'], 404);
-        }
-
-        return response()->json(['upload_status' => $event->upload_status]);
-    }
-
     public function uploadPhotosForEvent(string $uuid, Request $request)
     {
         $event = Event::where('uuid', $uuid)->firstOrFail(['id', 'user_id', 'uuid', 'name']);
@@ -245,7 +236,7 @@ class FaceFinderController extends Controller
         // Process photos
         $photoResult = null;
         if (!empty($allPhotoFiles)) {
-            $photoResult = $this->uploadPhotosToAlbum($uuid, $allPhotoFiles, $albumId);
+            $photoResult = $this->uploadPhotosToAlbum($uuid, $allPhotoFiles, $albumId, $userId);
             if (!$photoResult) {
                 return response()->json([
                     'message' => 'Failed to process photos. Please try again.'
@@ -261,8 +252,9 @@ class FaceFinderController extends Controller
                 'message' => 'Files are being uploaded. Please wait for a few minutes.',
                 'results' => $results,
                 'event' => [
-                    'uuid' => $event->uuid,
-                    'name' => $event->name
+                    'user_id' => $userId,
+                    'event_id' => $event->id,
+                    'album_id' => $albumId
                 ]
             ]);
         }
@@ -453,7 +445,7 @@ class FaceFinderController extends Controller
         }
 
         // Dispatch job to process photos
-        $batchName = "event_{$userId}_{$eventUuid}";
+        $batchName = "event_{$albumId}_{$eventUuid}";
         $batchJobs = [];
 
         // Split into chunks, 100 photos per job
@@ -464,27 +456,17 @@ class FaceFinderController extends Controller
         $batch = Bus::batch($batchJobs)
             ->name($batchName)
             ->onQueue('high')
-            ->then(function (Batch $batch) use ($eventId) {
-                try {
-                    $event = Event::find($eventId);
-                    if ($event) {
-                        $event->upload_status = 'completed';
-                        $event->save();
-                    }
-                } catch (\Throwable $e) {
-                    Log::error('Failed to mark event completed', ['event_id' => $eventId, 'error' => $e->getMessage()]);
-                }
+            ->then(function (Batch $batch) {
+                UploadSession::where('batch_id', $batch->id)
+                    ->update([
+                        'status' => 'complete',
+                    ]);
             })
-            ->catch(function (Batch $batch, \Throwable $e) use ($eventId) {
-                try {
-                    $event = Event::find($eventId);
-                    if ($event) {
-                        $event->upload_status = 'fail';
-                        $event->save();
-                    }
-                } catch (\Throwable $ex) {
-                    Log::error('Failed to mark event failed', ['event_id' => $eventId, 'error' => $ex->getMessage()]);
-                }
+            ->catch(function (Batch $batch) {
+                UploadSession::where('batch_id', $batch->id)
+                    ->update([
+                        'status' => 'fail',
+                    ]);
             })
             ->finally(function () use ($localTempZipPath, $localTempDir) {
                 @unlink($localTempZipPath);
@@ -492,14 +474,22 @@ class FaceFinderController extends Controller
             })
             ->dispatch();
 
+        // Add uploader session
+        $uploadSession = UploadSession::create([
+            'user_id' => $userId,
+            'event_id' => $eventId,
+            'album_id' => $albumId,
+            'batch_id' => $batch->id,
+        ]);
+
         return [
+            'upload_session_id' => $uploadSession->id,
             'batch_id' => $batch->id,
             'type' => 'zip'
         ];
     }
 
-
-    public function uploadPhotosToAlbum(string $eventUuid, $photos, ?int $albumId = null)
+    public function uploadPhotosToAlbum(string $eventUuid, $photos, ?int $albumId = null, $userId)
     {
         $event = Event::query()->where('uuid', $eventUuid)->first();
 
@@ -520,6 +510,9 @@ class FaceFinderController extends Controller
             $albumId = $album->id;
         }
 
+        $batchName = "event_{$albumId}_{$eventUuid}";
+        $batchJobs = [];
+
         // Prepare photo data with base64 encoding for queue serialization
         $photoData = [];
         foreach($photos as $photo){
@@ -530,15 +523,40 @@ class FaceFinderController extends Controller
             ];
         }
 
-        // Batch photos into groups of 10 and dispatch jobs
-        foreach (array_chunk($photoData, 10) as $photoBatch) {
-            ProcessDirectPhotoUploadJob::dispatch($event->id, $albumId, $photoBatch)->onQueue('high');
+        // Batch photos into groups of 100 and dispatch jobs
+        foreach (array_chunk($photoData, 100) as $photoBatch) {
+            $batchJobs[] = new ProcessDirectPhotoUploadJob($event->id, $albumId, $photoBatch);
         }
 
+        $batch = Bus::batch($batchJobs)
+            ->name($batchName)
+            ->onQueue('high')
+            ->then(function (Batch $batch) {
+                UploadSession::where('batch_id', $batch->id)
+                    ->update([
+                        'status' => 'complete',
+                    ]);
+            })
+            ->catch(function (Batch $batch) {
+                UploadSession::where('batch_id', $batch->id)
+                    ->update([
+                        'status' => 'fail',
+                    ]);
+            })
+            ->dispatch();
+
+        // Add uploader session
+        $uploadSession = UploadSession::create([
+            'user_id' => $userId,
+            'event_id' => $event->id,
+            'album_id' => $albumId,
+            'batch_id' => $batch->id,
+        ]);
+
         return [
-            'message' => 'Photos are being uploaded, Please wait for a few minutes. Once uploaded, photos will be visible here.',
-            'type' => 'photos',
-            'count' => count($photos)
+            'upload_session_id' => $uploadSession->id,
+            'batch_id' => $batch->id,
+            'type' => 'photo'
         ];
     }
 
@@ -740,6 +758,47 @@ class FaceFinderController extends Controller
         ]);
     }
 
+    public function deleteAlbum(int $id, Request $request)
+    {
+        $userId = auth()->id();
+
+        $album = Album::query()
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $s3 = Storage::disk('s3');
+
+        try {
+            Photo::query()
+                ->where('album_id', $album->id)
+                ->chunkById(100, function ($photos) use ($s3) {
+                    foreach ($photos as $photo) {
+                        if ($photo->path && $s3->exists($photo->path)) {
+                            $s3->delete($photo->path);
+                        }
+                    }
+                });
+
+            DB::transaction(function () use ($album) {
+                Photo::query()->where('album_id', $album->id)->delete();
+                UploaderLink::query()->where('album_id', $album->id)->delete();
+                $album->delete();
+            });
+
+            return redirect()
+                ->route('face_finder.albums.index')
+                ->with('success', 'Album deleted successfully.');
+        } catch (\Throwable $e) {
+            Log::error('Failed to delete album', [
+                'album_id' => $album->id,
+                'user_id' => $userId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->withErrors(['delete' => 'Failed to delete album. Please try again.']);
+        }
+    }
+
     public function generatePublic(string $uuid)
     {
         $event = Event::query()->where('uuid', $uuid)->firstOrFail();
@@ -758,7 +817,10 @@ class FaceFinderController extends Controller
 
     public function deleteEvent(string $uuid, Request $request)
     {
-        $event = Event::query()->where('uuid', $uuid)->firstOrFail();
+        $event = Event::query()
+            ->where('uuid', $uuid)
+            ->where('user_id', auth()->id())
+            ->firstOrFail();
 
         try {
             $s3 = Storage::disk('s3');
@@ -769,11 +831,22 @@ class FaceFinderController extends Controller
                 $s3->deleteDirectory($s3Folder);
             }
 
-            // Delete OTP attempts for this event
-            // OtpVerificationAttempt::query()->where('event_id', $event->id)->delete();
+            DB::transaction(function () use ($event) {
+                $albumIds = Album::query()
+                    ->where('event_id', $event->id)
+                    ->pluck('id');
 
-            // Finally delete event
-            $event->delete();
+                if ($albumIds->isNotEmpty()) {
+                    UploaderLink::query()->whereIn('album_id', $albumIds)->delete();
+                }
+
+                Photo::query()->where('event_id', $event->id)->delete();
+                Album::query()->where('event_id', $event->id)->delete();
+                OtpVerificationAttempt::query()->where('event_id', $event->id)->delete();
+
+                // Finally delete event (soft delete)
+                $event->delete();
+            });
 
             // Redirect back to upload events page
             return redirect()->route('face_finder.upload_photos')->with('status', 'event_deleted');
@@ -981,5 +1054,27 @@ class FaceFinderController extends Controller
         ]);
 
         return redirect()->route('face_finder.events.show', ['uuid' => $event->uuid]);
+    }
+
+    public function checkBatchStatus(Request $request)
+    {
+        $uploadSessionIds = $request->upload_session_ids;
+        $activeUploads = [];
+
+        $batchIds = UploadSession::whereIn('id', $uploadSessionIds)->pluck('batch_id')->toArray();
+
+        foreach($batchIds as $batchId){
+            $batch = Bus::findBatch($batchId);
+
+            if ($batch) {
+                $activeUploads[] = [
+                    'name'     => "Batch : " . $batchId,
+                    'progress' => $batch->progress(),
+                    'finished' => $batch->finished(),
+                ];
+            }
+        }
+
+        return response()->json($activeUploads);
     }
 }

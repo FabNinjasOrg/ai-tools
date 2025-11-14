@@ -141,7 +141,17 @@
                                     </template>
                                 </select>
                             </div>
-                            <p class="mt-2 text-xs text-slate-500" x-show="selectedEventUuid && albums.length === 0">No albums yet for this event.</p>
+                            <div x-show="selectedEventUuid && albums.length === 0" class="mt-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                                <p class="text-xs text-amber-800 flex items-start gap-2">
+                                    <svg class="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span>No albums found. Please <a
+                                            :href="'{{ route('face_finder.events.show', ['uuid' => ':uuid']) }}'.replace(':uuid', selectedEventUuid)"
+                                            class="font-semibold text-amber-900 underline hover:text-amber-700"
+                                        >create an album</a> first before uploading photos.</span>
+                                </p>
+                            </div>
                                 </div>
 
                             <!-- Uppy Dashboard Container -->
@@ -321,21 +331,15 @@
                             // Show success message
                             this.$store.messages.showSuccess(data.message, 0);
 
-                            // Store event info in localStorage for face finding page
-                            if (data.event && data.event.uuid) {
-                                localStorage.setItem('ff_uploading_event', JSON.stringify({
-                                    uuid: data.event.uuid,
-                                    name: data.event.name || ''
-                                }));
-                            }
+                            const uploadSessionIds = data.results.map(item => item.upload_session_id);
+
+                            // Collect data for polling
+                            this.$store.uploading_data.polling = true;
+                            this.$store.uploading_data.upload_session_ids = uploadSessionIds;
 
                             // Reset uppy for next upload
                             uppyManager.reset();
 
-                            // Redirect to events list after a short delay
-                            setTimeout(() => {
-                                window.location.href = "{{ route('face_finder.events.index') }}";
-                            }, 2000);
                         } else {
                             throw new Error('Unexpected response format');
                         }

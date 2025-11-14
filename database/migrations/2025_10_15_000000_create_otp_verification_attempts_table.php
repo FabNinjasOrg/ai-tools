@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('ip_address', 45)->nullable();
             $table->string('user_agent', 512)->nullable();
             $table->timestamps();
-
+            $table->softDeletes();
             $table->foreign('event_id')->references('id')->on('events')->cascadeOnDelete();
         });
     }

@@ -19,6 +19,7 @@ return new class extends Migration
             $table->unsignedInteger('photos_count')->default(0);
             $table->string('public_url')->nullable()->unique();
             $table->timestamps();
+            $table->softDeletes();
             $table->index(['user_id', 'created_at']);
         });
     }

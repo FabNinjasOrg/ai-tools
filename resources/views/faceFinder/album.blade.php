@@ -493,7 +493,14 @@
                             throw new Error(data.message || 'Upload failed');
                         }
                         const data = await response.json();
+
                         this.$store.messages.showSuccess(data.message || 'Photos uploaded successfully.');
+
+                        const uploadSessionIds = data.results.map(item => item.upload_session_id);
+
+                        // Collect data for polling
+                        this.$store.uploading_data.polling = true;
+                        this.$store.uploading_data.upload_session_ids = uploadSessionIds;
 
                         uppyManager.closeModal();
                         uppyManager.reset();

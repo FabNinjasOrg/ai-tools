@@ -12,21 +12,6 @@
                 >
                 <h1 x-text="eventName"></h1>
             </div>
-            <div class="flex items-center gap-2">
-                <form action="{{ route('face_finder.events.delete', ['uuid' => $uuid]) }}" method="POST"
-                    onsubmit="return confirm('Are you sure you want to delete this event? This cannot be undone.');">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit"
-                        class="h-10 px-4 rounded-xl bg-red-600 text-white hover:bg-red-700 inline-flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                    </button>
-                </form>
-            </div>
         </div>
 
         <!-- Tabs Navigation -->
@@ -82,7 +67,24 @@
                         </template>
                         <div x-show="!albumsLoading && albums.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                             <template x-for="album in albums" :key="album.id">
-                                <div class="group bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
+                                <div class="group relative bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
+                                    <form
+                                        :action="'{{ route('face_finder.albums.delete', ['id' => 'ALBUM_ID']) }}'.replace('ALBUM_ID', album.id)"
+                                        method="POST"
+                                        onsubmit="return confirm('Are you sure you want to delete this album? This cannot be undone.');"
+                                        class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200 z-10"
+                                    >
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                                @click.stop
+                                                class="p-2 rounded-full bg-white/90 text-red-600 border border-red-100 shadow-sm hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-200"
+                                                title="Delete album">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </form>
                                     <!-- Album Header with Folder Icon -->
                                     <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 flex flex-col items-center">
                                         <div class="relative">
@@ -276,92 +278,11 @@
                     }
                 },
 
-                // initUppy() {
-                //     if (!window.UppyUploadManager) {
-                //         console.error('Uppy manager not loaded');
-                //         return;
-                //     }
-                //     // Prevent double initialization
-                //     if (uppyManager) {
-                //         return;
-                //     }
-
-                //     uppyManager = new window.UppyUploadManager({
-                //         container: this.$refs.uppyModalContainer,
-                //         inline: false,
-                //         onUpload: (files) => {
-                //             this.uploadPhotos(files);
-                //         },
-                //         onError: (message) => {
-                //             this.$store.messages.showError(message);
-                //         }
-                //     });
-                // },
-
                 openUploadModal() {
                     if (uppyManager) {
                         uppyManager.openModal();
                     }
                 },
-
-                // async uploadPhotos(files) {
-                //     if (!files || files.length === 0) {
-                //         this.$store.messages.showError('Please select at least one photo to upload.');
-                //         return;
-                //     }
-
-                //     const formData = new FormData();
-
-                //     // Separate zip files and photo files
-                //     files.forEach((file) => {
-                //         if (!file) return;
-
-                //         const fileName = file.name || 'file';
-                //         const fileExtension = fileName.toLowerCase().split('.').pop();
-
-                //         // Check if it's a zip file
-                //         if (fileExtension === 'zip') {
-                //             formData.append('zips[]', file.data, fileName);
-                //         } else {
-                //             // It's a photo file
-                //             formData.append('photos[]', file.data, fileName);
-                //         }
-                //     });
-
-                //     try {
-                //         const response = await fetch('{{ route('face_finder.events.upload_photos', ['uuid' => $uuid]) }}', {
-                //             method: 'POST',
-                //             headers: {
-                //                 'X-Requested-With': 'XMLHttpRequest',
-                //                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                //             },
-                //             body: formData
-                //         });
-
-                //         if (!response.ok) {
-                //             const data = await response.json().catch(() => ({}));
-                //             throw new Error(data.message || 'Upload failed');
-                //         }
-
-                //         const data = await response.json();
-                //         this.$store.messages.showSuccess(data.message || 'Photos uploaded successfully. It will take some time to process them. Kindly, wait.');
-
-                //         // Close modal and reset
-                //         uppyManager.closeModal();
-                //         uppyManager.reset();
-
-                //         // Reload photos
-                //         this.photos = [];
-                //         this.page = 0;
-                //         this.hasMore = true;
-                //         await this.loadMore();
-                //     } catch (error) {
-                //         console.error('Upload error:', error);
-                //         this.$store.messages.showError(error.message || 'Failed to upload photos. Please try again.');
-
-                //         uppyManager.reset();
-                //     }
-                // },
 
                 async loadAlbums() {
                     this.albumsLoading = true;
@@ -385,36 +306,6 @@
                         this.albumsLoading = false;
                     }
                 },
-
-                // actions
-                // async loadMore() {
-                //     if (this.loading || !this.hasMore) return;
-                //     this.loading = true;
-                //     try {
-                //         const response = await fetch(this.getPhotosApiUrl(), {
-                //             headers: {
-                //                 'X-Requested-With': 'XMLHttpRequest'
-                //             }
-                //         });
-                //         if (!response.ok) throw new Error('Failed to load photos');
-
-                //         const payload = await response.json();
-                //         this.eventName = payload?.album?.name || this.eventName;
-                //         if (payload?.album?.public_url) this.publicUrl = payload.album.public_url;
-                //         if (Array.isArray(payload.photos)) this.photos.push(...payload.photos);
-
-                //         // Handle new pagination structure
-                //         if (payload.pagination) {
-                //             this.hasMore = Boolean(payload.pagination.has_more_pages);
-                //             this.page = payload.pagination.current_page;
-                //         }
-                //     } catch (error) {
-                //         console.error(error);
-                //         this.$store.messages.showError('Failed to load photos. Please try again.');
-                //     } finally {
-                //         this.loading = false;
-                //     }
-                // },
 
                 async generatePublic() {
                     this.loadingUrl = true;
