@@ -3,7 +3,7 @@
 @section('page-title', 'All Albums')
 
 @section('content')
-    <div x-data="albumsPage()" x-init="init()" x-cloak class="max-w-7xl mx-auto px-6">
+    <div x-data="albumsPage()" x-cloak class="max-w-7xl mx-auto px-6">
         <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col shadow-sm">
             <div class="p-5 border-b border-slate-200 flex items-center justify-between">
                 <div class="flex items-center gap-3">

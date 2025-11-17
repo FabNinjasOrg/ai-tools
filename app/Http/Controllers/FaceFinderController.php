@@ -4,53 +4,24 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use App\Models\Album;
-use App\Models\Photo;
-use App\Models\UploaderLink;
-use App\Models\OtpVerificationAttempt;
-use App\Models\SubscriptionPlan;
 use App\Jobs\ProcessAlbumPhotoJob;
 use App\Jobs\ProcessDirectPhotoUploadJob;
 use App\Models\UploadSession;
-use App\Services\CalculateUserStorageService;
 use Illuminate\Http\Request;
 use Auth;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Bus\Batch;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use ZipArchive;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class FaceFinderController extends Controller
 {
-    private $calculateUserStorageService;
-
-    public function __construct(CalculateUserStorageService $calculateUserStorageService)
-    {
-        $this->calculateUserStorageService = $calculateUserStorageService;
-    }
-
     public function faceFinder()
     {
         if (Auth::check()) {
             return redirect()->route('face_finder.upload_photos');
         }
         return view('faceFinder.home');
-    }
-
-    public function pricing()
-    {
-        if (Auth::check()) {
-            return redirect()->route('face_finder.buy_subscription');
-        }
-
-        $currency = 'INR'; // Always INR
-        $plans = $this->getPlanData($currency);
-
-        return view('faceFinder.pricing', compact('plans', 'currency'));
     }
 
     public function uploadPhotosPage()
@@ -83,67 +54,6 @@ class FaceFinderController extends Controller
         ]);
     }
 
-    public function show(string $uuid)
-    {
-        $event = Event::query()->where('uuid', $uuid)->first();
-        $attemptTotal = 0;
-        $attemptUniquePhones = 0;
-        $noMatchCount = 0;
-
-        if ($event) {
-            $attemptTotal = $event->otpAttempts()->count();
-
-            $attemptUniquePhones = $event->otpAttempts()
-                ->whereNotNull('phone_number')
-                ->distinct('phone_number')
-                ->count('phone_number');
-
-            $noMatchCount =  $event->otpAttempts()->where('matched_found_photos', 0)->count();
-        }
-
-        return view('faceFinder.event', [
-            'uuid' => $uuid,
-            'eventId' => $event ? $event->id : null,
-            'attemptTotal' => $attemptTotal,
-            'attemptUniquePhones' => $attemptUniquePhones,
-            'noMatchCount' => $noMatchCount
-        ]);
-    }
-
-    public function index(Request $request)
-    {
-        return view('faceFinder.events-list');
-    }
-
-    public function loadEvents(Request $request)
-    {
-        $events = Event::query()
-            ->where('user_id', auth()->id())
-            ->where('upload_status', 'completed')
-            ->withCount('photos')
-            ->orderByDesc('created_at')
-            ->get(['id', 'uuid', 'name', 'created_at']);
-
-        $albumCounts = Album::query()
-            ->whereIn('event_id', $events->pluck('id'))
-            ->selectRaw('event_id, COUNT(*) as cnt')
-            ->groupBy('event_id')
-            ->pluck('cnt', 'event_id');
-
-        return response()->json([
-            'albums' => $events->map(function ($a) use ($albumCounts) {
-                return [
-                    'id' => $a->id,
-                    'uuid' => $a->uuid,
-                    'name' => $a->name,
-                    'count' => $a->photos_count,
-                    'albums_count' => (int) ($albumCounts[$a->id] ?? 0),
-                    'created_at' => $a->created_at,
-                ];
-            })
-        ]);
-    }
-
     public function uploadPhotosForEvent(string $uuid, Request $request)
     {
         $event = Event::where('uuid', $uuid)->firstOrFail(['id', 'user_id', 'uuid', 'name']);
@@ -163,19 +73,21 @@ class FaceFinderController extends Controller
         $allZipFiles = $request->file('zips', []);
         $allPhotoFiles = $request->file('photos', []);
 
-        if (!userHasAccessibility()) {
-            $existingEvent = Event::where('user_id', $userId)->first();
-            if ($existingEvent) {
+        // if (!userHasAccessibility()) {
+        //     $existingEvent = Event::where('user_id', $userId)->first();
+        //     if ($existingEvent) {
+        //         return response()->json([
+        //             'message' => 'Trial users can create only one event. Please delete your existing event or upgrade your subscription.'
+        //         ], 422);
+        //     }
+        // }
+
+        if(userHasAccessibility()){
+            if(isUserStorageFull()){
                 return response()->json([
-                    'message' => 'Trial users can create only one event. Please delete your existing event or upgrade your subscription.'
+                    'message' => 'Your storage limit has been reached. Please upgrade your subscription to upload more photos. Or delete existing events to free up space.'
                 ], 422);
             }
-        }
-
-        if(isUserStorageFull()){
-            return response()->json([
-                'message' => 'Your storage limit has been reached. Please upgrade your subscription to upload more photos. Or delete existing events to free up space.'
-            ], 422);
         }
 
         // Validate all zip files first
@@ -194,11 +106,17 @@ class FaceFinderController extends Controller
         $directPhotoCount = 0;
         if (!empty($allPhotoFiles)) {
             $directPhotoCount = count($allPhotoFiles);
+        }
 
-            // Check trial user photo limit (combined total of zip photos + direct photos)
-            if (!userHasAccessibility() && ($zipPhotoCount + $directPhotoCount) > 10) {
+        // Check trial user photo limit - event should have maximum 10 photos total
+        if (!userHasAccessibility()) {
+            $existingPhotoCount = $event->photos()->count();
+            $totalPhotosAfterUpload = $existingPhotoCount + $zipPhotoCount + $directPhotoCount;
+
+            if ($totalPhotosAfterUpload > 10) {
+                $newPhotosCount = $zipPhotoCount + $directPhotoCount;
                 return response()->json([
-                    'message' => "Trial users can upload up to 10 images only. You are trying to upload " . ($zipPhotoCount + $directPhotoCount) . " images total ({$zipPhotoCount} from ZIP files, {$directPhotoCount} direct photos). Upgrade your subscription for more."
+                    'message' => "Trial users can have only 10 photos per event. This event currently has {$existingPhotoCount} photos. You are trying to upload {$newPhotosCount} more photos, which would exceed the limit. Upgrade your subscription for more."
                 ], 422);
             }
         }
@@ -449,7 +367,7 @@ class FaceFinderController extends Controller
         $batchJobs = [];
 
         // Split into chunks, 100 photos per job
-        foreach (array_chunk($photos, 100) as $chunk) {
+        foreach (array_chunk($photos, 2) as $chunk) {
             $batchJobs[] = new ProcessAlbumPhotoJob($eventId, $albumId, $userId, $eventUuid, $chunk, $localTempZipPath);
         }
 
@@ -524,7 +442,7 @@ class FaceFinderController extends Controller
         }
 
         // Batch photos into groups of 100 and dispatch jobs
-        foreach (array_chunk($photoData, 100) as $photoBatch) {
+        foreach (array_chunk($photoData, 2) as $photoBatch) {
             $batchJobs[] = new ProcessDirectPhotoUploadJob($event->id, $albumId, $photoBatch);
         }
 
@@ -558,502 +476,6 @@ class FaceFinderController extends Controller
             'batch_id' => $batch->id,
             'type' => 'photo'
         ];
-    }
-
-    public function photos(string $uuid, Request $request)
-    {
-        $event = Event::query()->where('uuid', $uuid)->firstOrFail(['id','uuid','name','public_url','uploader_url']);
-
-        $perPage = $request->query('per_page', 24);
-
-        $photos = Photo::query()
-            ->where('event_id', $event->id)
-            ->orderBy('id')
-            ->paginate($perPage, ['id','filename','path','size_bytes']);
-
-        return response()->json([
-            'album' => [
-                'uuid' => $event->uuid,
-                'name' => $event->name,
-                'public_url' => $event->public_url,
-                'uploader_url' => $event->uploader_url,
-            ],
-            'photos' => $photos->map(function($p){
-                return [
-                    'id' => $p->id,
-                    'src' => Storage::disk('s3')->temporaryUrl($p->path, now()->addDay()),
-                    'size' => $p->size_bytes,
-                ];
-            }),
-            'pagination' => [
-                'current_page' => $photos->currentPage(),
-                'last_page' => $photos->lastPage(),
-                'per_page' => $photos->perPage(),
-                'total' => $photos->total(),
-                'has_more_pages' => $photos->hasMorePages(),
-            ],
-        ]);
-    }
-
-    public function albums(string $uuid, Request $request)
-    {
-        $event = Event::query()->where('uuid', $uuid)->firstOrFail(['id','uuid','name']);
-        $albums = Album::query()
-            ->where('event_id', $event->id)
-            ->orderByDesc('id')
-            ->get(['id','name','created_at']);
-
-        return response()->json([
-            'event_name' => $event->name,
-            'albums' => $albums->map(function ($a) {
-                return [
-                    'id' => $a->id,
-                    'name' => $a->name,
-                    'created_at' => $a->created_at,
-                ];
-            })
-        ]);
-    }
-
-    public function allAlbums()
-    {
-        return view('faceFinder.albums');
-    }
-
-    public function loadAllAlbums(Request $request)
-    {
-        $user = Auth::user();
-
-        // Get all events for the user
-        $events = Event::query()
-            ->where('user_id', $user->id)
-            ->orderByDesc('id')
-            ->get(['id','name','uuid']);
-
-        $eventIds = $events->pluck('id');
-
-        // Build albums query
-        $albumsQuery = Album::query()
-            ->whereIn('event_id', $eventIds)
-            ->with('event:id,name,uuid');
-
-        // Apply event filter if provided
-        if ($request->has('event_id') && $request->event_id) {
-            $albumsQuery->where('event_id', $request->event_id);
-        }
-
-        $albums = $albumsQuery->orderByDesc('id')->get(['id','event_id','name','created_at']);
-
-        return response()->json([
-            'events' => $events->map(function ($event) {
-                return [
-                    'id' => $event->id,
-                    'name' => $event->name,
-                    'uuid' => $event->uuid,
-                ];
-            }),
-            'albums' => $albums->map(function ($album) {
-                return [
-                    'id' => $album->id,
-                    'name' => $album->name,
-                    'event_name' => $album->event ? $album->event->name : 'Unknown Event',
-                    'event_uuid' => $album->event ? $album->event->uuid : null,
-                    'created_at' => $album->created_at,
-                ];
-            })
-        ]);
-    }
-
-    public function storeAlbum(Request $request)
-    {
-        $validated = $request->validate([
-            'event_id' => 'required|exists:events,id',
-            'album_name' => 'required|string|max:255',
-        ]);
-
-        $user = Auth::user();
-
-        $event = Event::query()
-            ->where('id', $validated['event_id'])
-            ->where('user_id', $user->id)
-            ->firstOrFail();
-
-        // Create the album
-        $album = Album::create([
-            'event_id' => $event->id,
-            'name' => $validated['album_name'],
-        ]);
-
-        return redirect()
-            ->route('face_finder.events.show', ['uuid' => $event->uuid])
-            ->with('success', 'Album created successfully.');
-    }
-
-    public function albumShow(int $id)
-    {
-        $album = Album::query()->where('id', $id)->firstOrFail(['id','event_id','name','created_at']);
-        $event = Event::query()->where('id', $album->event_id)->firstOrFail(['id','uuid','name']);
-        $uploaderLink = UploaderLink::query()->where('album_id', $album->id)->latest('id')->first();
-
-        // Convert UTC times to session timezone for display
-        $timezone = session('uploader_link_timezone');
-        $startAtLocal = null;
-        $endAtLocal = null;
-
-        if ($uploaderLink && $timezone) {
-            $startAtLocal = $uploaderLink->start
-                ? Carbon::parse($uploaderLink->start)->setTimezone($timezone)->format('Y-m-d\TH:i')
-                : null;
-            $endAtLocal = $uploaderLink->end
-                ? Carbon::parse($uploaderLink->end)->setTimezone($timezone)->format('Y-m-d\TH:i')
-                : null;
-        }
-
-        return view('faceFinder.album', [
-            'albumId' => $album->id,
-            'albumName' => $album->name,
-            'eventUuid' => $event->uuid,
-            'eventName' => $event->name,
-            'uploaderLink' => $uploaderLink,
-            'startAtLocal' => $startAtLocal,
-            'endAtLocal' => $endAtLocal,
-        ]);
-    }
-
-    public function albumPhotos(int $id, Request $request)
-    {
-        $album = Album::query()->where('id', $id)->firstOrFail(['id','event_id','name', 'uploader_url', 'created_at']);
-        $event = Event::query()->where('id', $album->event_id)->firstOrFail(['id','uuid','name','public_url']);
-
-        $perPage = $request->query('per_page', 24);
-
-        $photos = Photo::query()
-            ->where('event_id', $event->id)
-            ->orderBy('id')
-            ->paginate($perPage, ['id','filename','path','size_bytes']);
-
-        return response()->json([
-            'album' => [
-                'id' => $album->id,
-                'name' => $album->name,
-                'event_uuid' => $event->uuid,
-                'event_name' => $event->name,
-                'public_url' => $event->public_url,
-                'uploader_url' => $album->uploader_url,
-            ],
-            'photos' => $photos->map(function($p){
-                return [
-                    'id' => $p->id,
-                    'src' => Storage::disk('s3')->temporaryUrl($p->path, now()->addDay()),
-                    'size' => $p->size_bytes,
-                ];
-            }),
-            'pagination' => [
-                'current_page' => $photos->currentPage(),
-                'last_page' => $photos->lastPage(),
-                'per_page' => $photos->perPage(),
-                'total' => $photos->total(),
-                'has_more_pages' => $photos->hasMorePages(),
-            ],
-        ]);
-    }
-
-    public function deleteAlbum(int $id, Request $request)
-    {
-        $userId = auth()->id();
-
-        $album = Album::query()
-            ->where('id', $id)
-            ->firstOrFail();
-
-        $s3 = Storage::disk('s3');
-
-        try {
-            Photo::query()
-                ->where('album_id', $album->id)
-                ->chunkById(100, function ($photos) use ($s3) {
-                    foreach ($photos as $photo) {
-                        if ($photo->path && $s3->exists($photo->path)) {
-                            $s3->delete($photo->path);
-                        }
-                    }
-                });
-
-            DB::transaction(function () use ($album) {
-                Photo::query()->where('album_id', $album->id)->delete();
-                UploaderLink::query()->where('album_id', $album->id)->delete();
-                $album->delete();
-            });
-
-            return redirect()
-                ->route('face_finder.albums.index')
-                ->with('success', 'Album deleted successfully.');
-        } catch (\Throwable $e) {
-            Log::error('Failed to delete album', [
-                'album_id' => $album->id,
-                'user_id' => $userId,
-                'error' => $e->getMessage(),
-            ]);
-
-            return back()->withErrors(['delete' => 'Failed to delete album. Please try again.']);
-        }
-    }
-
-    public function generatePublic(string $uuid)
-    {
-        $event = Event::query()->where('uuid', $uuid)->firstOrFail();
-        if ($event->public_url) {
-            return response()->json(['public_url' => $event->public_url]);
-        }
-
-        // Generate URL /event/{name}/{uuid}
-        $slugName = Str::slug($event->name);
-        $publicUrl = route('face_finder.public.show', ['name' => $slugName, 'uuid' => $event->uuid]);
-        $event->public_url = $publicUrl;
-        $event->save();
-
-        return response()->json(['public_url' => $publicUrl]);
-    }
-
-    public function deleteEvent(string $uuid, Request $request)
-    {
-        $event = Event::query()
-            ->where('uuid', $uuid)
-            ->where('user_id', auth()->id())
-            ->firstOrFail();
-
-        try {
-            $s3 = Storage::disk('s3');
-            $s3Folder = "FaceFinder/Albums/{$event->user_id}/{$event->uuid}";
-
-            // Delete all files in the event folder (ZIP + photos)
-            if ($s3->exists($s3Folder)) {
-                $s3->deleteDirectory($s3Folder);
-            }
-
-            DB::transaction(function () use ($event) {
-                $albumIds = Album::query()
-                    ->where('event_id', $event->id)
-                    ->pluck('id');
-
-                if ($albumIds->isNotEmpty()) {
-                    UploaderLink::query()->whereIn('album_id', $albumIds)->delete();
-                }
-
-                Photo::query()->where('event_id', $event->id)->delete();
-                Album::query()->where('event_id', $event->id)->delete();
-                OtpVerificationAttempt::query()->where('event_id', $event->id)->delete();
-
-                // Finally delete event (soft delete)
-                $event->delete();
-            });
-
-            // Redirect back to upload events page
-            return redirect()->route('face_finder.upload_photos')->with('status', 'event_deleted');
-        } catch (\Throwable $e) {
-            Log::error('Failed to delete event', ['uuid' => $uuid, 'error' => $e->getMessage()]);
-            return back()->withErrors(['delete' => 'Failed to delete event']);
-        }
-    }
-
-    public function buySubscription()
-    {
-        $user = Auth::user();
-        $currency = 'INR'; // Always INR regardless of country
-
-        $plans = $this->getPlanData($currency);
-
-        $currentPlanId = null;
-        $paymentPending = userSubscribedButPaymentPending();
-
-        if (userSubscriptionActivated()) {
-            $currentSubscription = $user->subscriptions()
-                ->where('type', 'subscription')
-                ->where('status', 'active')
-                ->latest()
-                ->first();
-
-            if ($currentSubscription && $currentSubscription->plan_id) {
-                $currentPlanId = $currentSubscription->plan_id;
-            }
-        }
-
-        return view('faceFinder.buy-subscription', compact('plans', 'currency', 'currentPlanId', 'paymentPending'));
-    }
-
-    public function manageSubscription()
-    {
-        if (!userHasAccessibility()) {
-            return redirect()->route('face_finder.buy_subscription');
-        }
-
-        $user = Auth::user();
-        $currency = 'INR'; // Always INR regardless of country
-
-        $currentSubscription = $user->subscriptions()
-            ->where('type', 'subscription')
-            ->latest()
-            ->first();
-
-        $planData = null;
-        $subscriptionDetails = null;
-
-        if ($currentSubscription && $currentSubscription->plan_id) {
-            // Get plan data for the specific plan
-            $planData = $this->getPlanData($currency, $currentSubscription->plan_id);
-
-            // Build subscription details
-            $subscriptionDetails = [
-                'subscription_id' => $currentSubscription->subscription_id,
-                'status' => $currentSubscription->status,
-                'start_date' => $currentSubscription->start_date,
-                'end_date' => $currentSubscription->end_date,
-                'payment_gateway' => $currentSubscription->payment_gateway,
-            ];
-        }
-        $currencySymbol = $currency === 'INR' ? '₹' : '$';
-
-        return view('faceFinder.manage-subscription', [
-            'currency' => $currency,
-            'currencySymbol' => $currencySymbol,
-            'planData' => $planData,
-            'subscriptionDetails' => $subscriptionDetails
-        ]);
-    }
-
-    private function getPlanData($currency = 'USD', $planId = null)
-    {
-        $subscriptionPlan = SubscriptionPlan::query()
-            ->with(['prices' => function ($query) {
-                $query->active();
-            }]);
-
-        // If plan ID is provided, get specific plan
-        if ($planId) {
-            $subscriptionPlan->where('id', $planId);
-            $plan = $subscriptionPlan->first();
-
-            if (!$plan) {
-                return null;
-            }
-
-            return $this->formatPlanData($plan, $currency);
-        }
-
-        // Get all active plans
-        $plans = $subscriptionPlan->active()->orderBy('id')->get();
-
-        return $plans->map(function ($plan) use ($currency) {
-            return $this->formatPlanData($plan, $currency);
-        })->toArray();
-    }
-
-    private function formatPlanData($plan, $currency)
-    {
-        $priceField = $currency === 'INR' ? 'inr_price' : 'usd_price';
-        $planIdField = $currency === 'INR' ? 'razorpay_plan_id' : 'stripe_plan_id';
-
-        $price = $plan->prices->first();
-
-        return [
-            'id' => $plan->id,
-            'name' => $plan->name,
-            'plan_id' => $plan->$planIdField,
-            'storage' => $plan->storage,
-            'price' => $price ? $price->$priceField : 0,
-            'amount' => $price ? $price->$priceField : null,
-            'billing_type' => str_contains(strtolower($plan->name), 'monthly') ? 'monthly' : 'yearly',
-        ];
-    }
-
-    public function bulkDeletePhotos(string $uuid, Request $request)
-    {
-        $event = Event::query()->where('uuid', $uuid)->where('user_id', auth()->id())->firstOrFail();
-
-        $validated = $request->validate([
-            'photo_ids' => 'required|string',
-        ]);
-
-        try {
-            $photoIds = json_decode($validated['photo_ids'], true);
-
-            if (!is_array($photoIds) || empty($photoIds)) {
-                return redirect()->back()->withErrors('No photos selected for deletion.');
-            }
-
-            $photos = Photo::query()
-                ->where('event_id', $event->id)
-                ->whereIn('id', $photoIds)
-                ->get();
-
-            if ($photos->isEmpty()) {
-                return redirect()->back()->withErrors('No valid photos found to delete.');
-            }
-
-            $s3 = Storage::disk('s3');
-            $deletedCount = 0;
-
-            foreach ($photos as $photo) {
-                try {
-                    // Delete from S3
-                    if ($s3->exists($photo->path)) {
-                        $s3->delete($photo->path);
-                    }
-
-                    // Delete from database
-                    $photo->delete();
-                    $deletedCount++;
-                } catch (\Throwable $e) {
-                    Log::error('Failed to delete photo', [
-                        'photo_id' => $photo->id,
-                        'error' => $e->getMessage()
-                    ]);
-                    continue;
-                }
-            }
-
-            return redirect()->back()->with('success', "Successfully deleted {$deletedCount} photo(s).");
-        } catch (\Throwable $e) {
-            Log::error('Bulk delete photos error', ['error' => $e->getMessage()]);
-            return redirect()->back()->withErrors('Failed to delete photos. Please try again.');
-        }
-    }
-
-    public function storeEvent(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'album_name' => 'required|string|max:255',
-        ]);
-
-        $userId = auth()->id();
-        $uuid = (string) Str::uuid();
-
-        // Check if user is on trial and enforce limits
-        if (!userHasAccessibility()) {
-            $existingEvent = Event::where('user_id', $userId)->first();
-            if ($existingEvent) {
-                return redirect()->back()->withErrors([
-                    'name' => 'Trial users can create only one event. Please delete your existing event or upgrade your subscription.'
-                ]);
-            }
-        }
-
-        $event = Event::create([
-            'user_id' => $userId,
-            'uuid' => $uuid,
-            'name' => $validated['name'],
-            'photos_count' => 0,
-            'upload_status' => 'completed',
-        ]);
-
-        // Create an Album
-        Album::create([
-            'event_id' => $event->id,
-            'name' => $validated['album_name'],
-        ]);
-
-        return redirect()->route('face_finder.events.show', ['uuid' => $event->uuid]);
     }
 
     public function checkBatchStatus(Request $request)

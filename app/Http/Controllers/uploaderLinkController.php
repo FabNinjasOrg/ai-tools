@@ -89,22 +89,25 @@ class uploaderLinkController extends Controller
 
     public function uploaderPage($uuid, $albumId, Request $request)
     {
-        $cookiePasscode = $request->cookie('uploader_passcode') ?? base64_decode($request->cookie('uploader_passcode'));
+        $cookiePasscode = $request->cookie('uploader_passcode');
         $isUserValidated = false;
         $isStorageFull = false;
         $isLinkExpired = false;
-
-        if(isset($cookiePasscode) && !empty($cookiePasscode)){
-            $isUserValidated = true;
-        }
-
         $encodedAlbumId = base64_decode($albumId);
 
         $album = Album::with(['event' => function ($query) use ($uuid) {
             $query->where('uuid',  $uuid);
         }, 'event.user'])->find($encodedAlbumId);
 
-        $uploaderLink = UploaderLink::where('album_id', $album->id)->first();
+        $uploaderLink = $album ? UploaderLink::where('album_id', $album->id)->first() : null;
+
+        if ($cookiePasscode && $uploaderLink) {
+            $decodedPasscode = base64_decode($cookiePasscode, true);
+
+            if ($decodedPasscode !== false && $uploaderLink->passcode === $decodedPasscode) {
+                $isUserValidated = true;
+            }
+        }
 
         if ($isUserValidated && $album && $album->event) {
             if ($uploaderLink) {

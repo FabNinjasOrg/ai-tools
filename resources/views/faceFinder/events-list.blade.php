@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="max-w-7xl mx-auto px-6">
-        <div x-data="eventsListApp()" x-init="init()" x-cloak>
+        <div x-data="eventsListApp()" x-cloak>
 
             <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col shadow-sm">
                 <div class="p-5 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 shrink-0">

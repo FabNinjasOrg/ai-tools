@@ -65,16 +65,21 @@
                         this.info = '';
                     }
                 });
+
+                const persistedPolling = Alpine.$persist(false).as('faceFinderUploadPolling');
+                const persistedSessions = Alpine.$persist([]).as('faceFinderUploadSessions');
+
                 Alpine.store('uploading_data', {
-                    polling: false,
-                    upload_session_ids: []
+                    polling: persistedPolling,
+                    upload_session_ids: persistedSessions
                 });
             });
         </script>
     </head>
     <body class="@yield('body-class', 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 text-slate-900 min-h-screen flex flex-col')">
         @yield('body')
+
+        @include('faceFinder.layout.upload-progress-panel')
     </body>
     @yield('scripts')
 </html>
-

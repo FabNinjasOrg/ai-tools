@@ -3,7 +3,7 @@
 @section('page-title', 'Event Details')
 
 @section('content')
-    <div x-data="eventPage('{{ $uuid }}')" x-init="init()" x-cloak class="max-w-7xl mx-auto px-6">
+    <div x-data="eventPage('{{ $uuid }}')" x-cloak class="max-w-7xl mx-auto px-6">
         <div class="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
             <div class="flex items-center gap-3 text-xl md:text-xl">
                 <a href="{{ route('face_finder.events.index') }}" class="text-slate-600 hover:text-green-600 transition-colors">

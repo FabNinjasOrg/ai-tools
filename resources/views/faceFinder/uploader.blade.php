@@ -156,7 +156,7 @@
                             <input type="hidden" name="timezone" id="timezone-passcode">
                             <div>
                                 <label for="passcode" class="block text-sm font-semibold text-slate-700 mb-3">
-                                    Pass Code
+                                    Pass Code <span class="text-red-500">*</span>
                                 </label>
                                 <input type="hidden" name="albumId" value="{{ $data['albumId'] }}">
                                 <input
@@ -293,7 +293,14 @@
                         }
 
                         const data = await response.json();
+
                         showSuccess(data.message || 'Photos uploaded successfully.');
+
+                        const uploadSessionIds = data.results.map(item => item.upload_session_id);
+
+                        // Collect data for polling
+                        this.$store.uploading_data.polling = true;
+                        this.$store.uploading_data.upload_session_ids = uploadSessionIds;
 
                         uppyManager.closeModal();
                         uppyManager.reset();

@@ -4,7 +4,7 @@
     class="pointer-events-none fixed bottom-4 right-4 z-[1100] flex w-full max-w-sm justify-end"
 >
     <div
-        x-show="activeBatches.length > 0"
+        x-show="openProgressBar"
         x-transition
         class="pointer-events-auto w-full rounded-2xl border border-slate-200 bg-white shadow-2xl"
     >
@@ -53,18 +53,31 @@
     function manageUploadProgressPanel()
     {
         return {
-            openProgressBar: true,
+            openProgressBar: false,
             activeBatches: [],
             timer: null,
 
             async init() {
                 this.$watch('$store.uploading_data.polling', (value) => {
                     if (value === true) {
-                        this.startPolling();
+                        if (this.hasUploadSessionIds()) {
+                            this.openProgressBar = true;
+                            this.startPolling();
+                        }
                     } else {
                         this.stopPolling();
+                        if (!this.hasUploadSessionIds()) {
+                            this.openProgressBar = false;
+                            this.activeBatches = [];
+                        }
                     }
                 });
+
+                if (this.$store.uploading_data.polling === true && this.hasUploadSessionIds()) {
+                    this.openProgressBar = true;
+                    this.startPolling();
+                    this.checkBatchStatus();
+                }
             },
 
             startPolling()
@@ -85,8 +98,22 @@
                 }
             },
 
+            hasUploadSessionIds()
+            {
+                const ids = Alpine.store('uploading_data').upload_session_ids;
+                return Array.isArray(ids) && ids.length > 0;
+            },
+
             async checkBatchStatus()
             {
+                if(!this.hasUploadSessionIds())
+                {
+                    this.stopPolling();
+                    this.openProgressBar = false;
+                    this.activeBatches = [];
+                    return;
+                }
+
                 const response = await fetch('{{ route('face_finder.check_batch_status') }}', {
                     method: "POST",
                     headers: {
@@ -108,11 +135,16 @@
                 if(data){
                     this.activeBatches = Array.isArray(data) ? data : [data];
 
+                    this.openProgressBar = true;
+
                     // Check if all batches are finished
                     const allFinished = this.activeBatches.every(batch => batch.finished === true);
 
                     if (allFinished) {
                         Alpine.store('uploading_data').polling = false;
+                        Alpine.store('uploading_data').upload_session_ids = [];
+                        this.openProgressBar = false;
+                        this.activeBatches = [];
                     }
                 }
             },

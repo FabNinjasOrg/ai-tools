@@ -213,8 +213,6 @@
             </main>
         </div>
     </div>
-
-    @include('faceFinder.layout.upload-progress-panel')
 @endsection
 
 @section('scripts')

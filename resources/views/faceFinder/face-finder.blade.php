@@ -6,9 +6,9 @@
     <div class="max-w-7xl mx-auto px-6">
         @if(isUserOnTrial())
             <div class="mb-8 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 shadow-lg p-6 relative">
-                <button class="absolute top-6 right-6 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold text-sm hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg">
+                <a href="{{ route('face_finder.buy_subscription') }}" class="absolute top-6 right-6 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold text-sm hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg">
                     Upgrade Now
-                </button>
+                </a>
                 <div class="flex items-start gap-4">
                     <div class="flex-shrink-0">
                         <div class="h-12 w-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
@@ -162,15 +162,15 @@
                                 <button
                                     type="button"
                                     @click="proceedPhotos()"
-                                    :disabled="!selectedEventUuid || selectedEventUuid === '' || !selectedAlbumId"
+                                    :disabled="!selectedEventUuid || selectedEventUuid === '' || !selectedAlbumId || uploading"
                                     class="px-6 py-3 rounded-xl font-semibold inline-flex items-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                    :class="(selectedEventUuid && selectedEventUuid !== '' && selectedAlbumId) ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700' : 'bg-slate-300 text-slate-500'"
+                                    :class="(selectedEventUuid && selectedEventUuid !== '' && selectedAlbumId && !uploading) ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700' : 'bg-slate-300 text-slate-500'"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5"
                                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M12 19V5m0 0l-5 5m5-5l5 5" />
                                     </svg>
-                                    <span>Upload Photos</span>
+                                    <span x-text="uploading ? 'Uploading...' : 'Upload Photos'"></span>
                                 </button>
                             </div>
                     </div>
@@ -192,6 +192,7 @@
                 selectedEventUuid: '',
                 selectedAlbumId: '',
                 loading: true,
+                uploading: false,
 
                 async init() {
                     const self = this;
@@ -262,6 +263,8 @@
                 async proceedPhotos() {
                     if (!uppyManager) return;
 
+                    if (this.uploading) return;
+
                     // Validate event selection - must have a valid UUID
                     if (!this.selectedEventUuid || (typeof this.selectedEventUuid === 'string' && this.selectedEventUuid.trim() === '')) {
                         this.$store.messages.showError('Please select an event to upload photos to.');
@@ -279,6 +282,7 @@
                     }
 
                     this.$store.messages.clear();
+                    this.uploading = true;
 
                     try {
                         const form = new FormData();
@@ -345,6 +349,8 @@
                         }
                     } catch (e) {
                         this.$store.messages.showError(e.message || 'Something went wrong.');
+                    } finally {
+                        this.uploading = false;
                     }
                 }
             }

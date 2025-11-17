@@ -79,14 +79,12 @@
                     class="px-6 py-4 font-medium text-sm transition-colors">
                     All Photos
                 </button>
-                @if(userHasAccessibility())
                 <button @click="activeTab = 'links'"
                     :class="activeTab === 'links' ? 'text-green-600 border-b-2 border-green-600' :
                         'text-slate-600 hover:text-slate-900'"
                     class="px-6 py-4 font-medium text-sm transition-colors">
                     Uploader Link
                 </button>
-                @endif
             </div>
 
             <div x-show="activeTab === 'photos'" class="p-6">
@@ -164,8 +162,8 @@
                 </div>
             </div>
 
-            @if(userHasAccessibility())
             <div x-show="activeTab === 'links'" class="p-6">
+                @if(userHasAccessibility())
                 <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
                     <div class="p-5 border-b border-slate-200">
                         <div class="flex items-center justify-between gap-3">
@@ -287,8 +285,26 @@
                         @endif
                     </div>
                 </div>
+                @else
+                <div class="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 shadow-lg p-8">
+                    <div class="flex flex-col items-center justify-center text-center">
+                        <div class="h-20 w-20 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 inline-flex items-center justify-center mb-4">
+                            <svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-orange-900 mb-2">Access Restricted</h3>
+                        <p class="text-amber-800 text-sm mb-6 max-w-md">Uploader link feature is not available for trial users. Please upgrade your subscription to unlock this feature.</p>
+                        <a href="{{ route('face_finder.buy_subscription') }}" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-all inline-flex items-center gap-2 shadow-md hover:shadow-lg">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            Upgrade Now
+                        </a>
+                    </div>
+                </div>
+                @endif
             </div>
-            @endif
         </div>
 
         @if(userHasAccessibility())
@@ -392,6 +408,10 @@
                 class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white transition-all">
                 Cancel
             </button>
+            <button @click="deleteSelectedPhotos()" :disabled="deletingPhotos"
+                class="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 disabled:opacity-60 disabled:cursor-not-allowed transition-all inline-flex items-center gap-2">
+                <span x-text="deletingPhotos ? 'Deleting…' : 'Delete'"></span>
+            </button>
         </div>
     </div>
 @endsection
@@ -426,10 +446,22 @@
                 loading: false,
                 selectedPhotos: [],
                 activeTab: '{{ request('tab', 'photos') }}',
+                pendingReload: false,
+                deletingPhotos: false,
 
                 async init() {
                     await this.loadMore();
                     this.initUppy();
+
+                    this.$watch('$store.uploading_data.polling', (value) => {
+                        if (value === false && this.pendingReload) {
+                            const hasSessions = Array.isArray(this.$store.uploading_data.upload_session_ids) && this.$store.uploading_data.upload_session_ids.length > 0;
+                            if (!hasSessions) {
+                                this.pendingReload = false;
+                                this.refreshPhotosGrid();
+                            }
+                        }
+                    });
 
                     @if($errors->any() && empty($uploaderLink))
                         this.showCreateLinkModal = true;
@@ -464,6 +496,11 @@
                         this.$store.messages.showError('Please select at least one photo to upload.');
                         return;
                     }
+
+                    if (uppyManager) {
+                        uppyManager.closeModal();
+                    }
+
                     const formData = new FormData();
                     files.forEach((file) => {
                         if (!file) return;
@@ -501,14 +538,9 @@
                         // Collect data for polling
                         this.$store.uploading_data.polling = true;
                         this.$store.uploading_data.upload_session_ids = uploadSessionIds;
+                        this.pendingReload = true;
 
-                        uppyManager.closeModal();
                         uppyManager.reset();
-
-                        this.photos = [];
-                        this.page = 0;
-                        this.hasMore = true;
-                        await this.loadMore();
                     } catch (error) {
                         this.$store.messages.showError(error.message || 'Failed to upload photos. Please try again.');
                         uppyManager.reset();
@@ -557,6 +589,13 @@
                     return `${base}?${params.toString()}`;
                 },
 
+                async refreshPhotosGrid() {
+                    this.photos = [];
+                    this.page = 0;
+                    this.hasMore = true;
+                    await this.loadMore();
+                },
+
                 async handleShareLinkSubmit() {
                     const raw = this.shareEmails || '';
                     const emails = raw.split(',').map(e => e.trim()).filter(Boolean);
@@ -601,6 +640,45 @@
                         this.shareErrors = 'An error occurred. Please try again.';
                     } finally {
                         this.sendingEmail = false;
+                    }
+                },
+
+                async deleteSelectedPhotos() {
+                    if (this.selectedPhotos.length === 0 || this.deletingPhotos) return;
+                    const confirmed = confirm('Delete selected photos? This cannot be undone.');
+                    if (!confirmed) return;
+
+                    this.deletingPhotos = true;
+                    try {
+                        const response = await fetch(
+                            '{{ route('face_finder.events.bulk_delete_photos', ['uuid' => ':uuid']) }}'.replace(':uuid', this.eventUuid),
+                            {
+                                method: 'DELETE',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                },
+                                body: JSON.stringify({
+                                    photo_ids: JSON.stringify(this.selectedPhotos),
+                                    album_id: this.albumId
+                                })
+                            }
+                        );
+
+                        const data = await response.json();
+
+                        if (!response.ok) {
+                            throw new Error(data.message || 'Failed to delete photos.');
+                        }
+
+                        this.$store.messages.showSuccess(data.message || 'Photos deleted successfully.');
+                        this.selectedPhotos = [];
+                        await this.refreshPhotosGrid();
+                    } catch (error) {
+                        this.$store.messages.showError(error.message || 'Failed to delete photos. Please try again.');
+                    } finally {
+                        this.deletingPhotos = false;
                     }
                 },
             }
