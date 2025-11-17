@@ -23,3 +23,23 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# FastAPI Python venv
+/fast-api-face-rec/venv/
+/fast-api-face-rec/__pycache__/
+/fast-api-face-rec/*.pyc
+/fast-api-face-rec/*.pyo
+/fast-api-face-rec/*.pyd
+/fast-api-face-rec/.Python
+/fast-api-face-rec/env/
+/fast-api-face-rec/pip-log.txt
+/fast-api-face-rec/pip-delete-this-directory.txt
+/fast-api-face-rec/.tox/
+/fast-api-face-rec/.coverage
+/fast-api-face-rec/.coverage.*
+/fast-api-face-rec/.cache
+/fast-api-face-rec/nosetests.xml
+/fast-api-face-rec/coverage.xml
+/fast-api-face-rec/*.cover
+/fast-api-face-rec/.hypothesis/
+/fast-api-face-rec/.pytest_cache/
