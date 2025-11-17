@@ -23,7 +23,7 @@
     </div>
 
     <!-- AI Tools Grid -->
-    <div id="tools" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 mb-10">
+    <div id="tools" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-8 mb-10">
         <!-- Summary Generation Card -->
         <div class="group relative bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-slate-200 hover:border-purple-300 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
             <div class="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -89,6 +89,32 @@
                 </a>
             </div>
         </div> --}}
+        <div class="group relative bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-slate-200 hover:border-green-300 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
+            <div class="absolute inset-0 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="relative z-10">
+                <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="10" cy="10" r="0.5" fill="currentColor"/>
+                        <circle cx="14" cy="10" r="0.5" fill="currentColor"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M10 14c1 1.5 3 1.5 4 0"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 3h4M3 3v4M21 3h-4M21 3v4M3 21h4M3 21v-4M21 21h-4M21 21v-4"/>
+                    </svg>
+                </div>
+                <h3 class="text-2xl font-bold text-slate-900 mb-4">Face Finder</h3>
+                <p class="text-slate-600 mb-6 leading-relaxed">
+                    Upload album of photos and find all images containing a specific person's photo.
+                </p>
+                <a href="{{ route('face_finder') }}" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-medium hover:from-green-700 hover:to-green-800 transition-all duration-300 group-hover:shadow-lg">
+                    Try now
+                    <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                        </svg>
+                </a>
+            </div>
+        </div>
     </div>
 
     <!-- About Section -->

@@ -1,4 +1,4 @@
-<nav class="relative z-40 px-6 py-4">
+<nav class="relative px-6 py-4">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
         <div class="flex items-center space-x-2">
             <a href="{{ route('home') }}" class="flex items-center gap-2">
@@ -25,7 +25,7 @@
                 @endif
             </a>
         </div>
-        @if(! request()->routeIs('home'))
+        @if(! request()->routeIs('home') && ! request()->routeIs('face_finder.public.show'))
         <div class="flex items-center">
             <a href="{{ route('home') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors font-medium">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
