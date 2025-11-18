@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('photos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
-            $table->foreignId('album_id')->constrained('albums')->onDelete('cascade');
+            $table->unsignedBigInteger('album_id')->nullable();
             $table->string('filename');
             $table->string('path');
             $table->json('embedding_json')->nullable();
