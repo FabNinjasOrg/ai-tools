@@ -499,4 +499,9 @@ class FaceFinderController extends Controller
 
         return response()->json($activeUploads);
     }
+
+    public function faq()
+    {
+        return view('faceFinder.faq');
+    }
 }

@@ -80,6 +80,9 @@ Route::prefix('face-finder')->group(function () {
         Route::post('cancel-subscription', [SubscriptionController::class, 'cancelSubscription'])->name('face_finder.subscription.cancel');
         Route::get('billing', [SubscriptionController::class, 'billing'])->name('face_finder.billing');
         Route::get('billing-data', [SubscriptionController::class, 'billingData'])->name('face_finder.billing.data');
+
+        // FAQ route
+        Route::get('faq', [FaceFinderController::class, 'faq'])->name('face_finder.faq');
     });
 
     // uploader link routes

@@ -13,11 +13,12 @@
         @unless($isPublicRoute)
             <div class="hidden md:flex items-center absolute left-1/2 -translate-x-1/2">
                 <nav class="flex items-center gap-1 rounded-full border border-slate-200/80 bg-white/70 backdrop-blur supports-[backdrop-filter]:bg-white/50 shadow-sm px-2 py-1">
-                    <a href="{{ route('face_finder') }}#how" class="px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 rounded-full hover:bg-white/80 focus:outline-none transition-colors">How it works</a>
+                    <a href="{{ route('face_finder') }}#how-it-works" class="px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 rounded-full hover:bg-white/80 focus:outline-none transition-colors">How it works</a>
                     <span class="h-5 w-px bg-slate-200 mx-1"></span>
                     <a href="{{ route('face_finder.pricing') }}" class="px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 rounded-full hover:bg-white/80 focus:outline-none transition-colors">Pricing</a>
                     <span class="h-5 w-px bg-slate-200 mx-1"></span>
                     <a href="{{ route('face_finder') }}#about" class="px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 rounded-full hover:bg-white/80 focus:outline-none transition-colors">About</a>
+                    <a href="{{ route('face_finder') }}#faqs" class="px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 rounded-full hover:bg-white/80 focus:outline-none transition-colors">FAQs</a>
                 </nav>
             </div>
             <div class="flex items-center gap-2">
