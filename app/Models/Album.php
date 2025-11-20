@@ -16,7 +16,6 @@ class Album extends Model
     protected $fillable = [
         'event_id',
         'name',
-        'uploader_url'
     ];
 
     public function event()

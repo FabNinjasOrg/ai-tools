@@ -115,7 +115,7 @@ class EventController extends Controller
 
     public function photos(string $uuid, Request $request)
     {
-        $event = Event::query()->where('uuid', $uuid)->firstOrFail(['id','uuid','name','public_url','uploader_url']);
+        $event = Event::query()->where('uuid', $uuid)->firstOrFail(['id','uuid','name','public_url']);
 
         $perPage = $request->query('per_page', 24);
 
@@ -129,7 +129,6 @@ class EventController extends Controller
                 'uuid' => $event->uuid,
                 'name' => $event->name,
                 'public_url' => $event->public_url,
-                'uploader_url' => $event->uploader_url,
             ],
             'photos' => $photos->map(function($p){
                 return [

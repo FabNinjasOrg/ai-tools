@@ -122,7 +122,7 @@ class AlbumController extends Controller
 
     public function albumPhotos(int $id, Request $request)
     {
-        $album = Album::query()->where('id', $id)->firstOrFail(['id','event_id','name', 'uploader_url', 'created_at']);
+        $album = Album::query()->where('id', $id)->firstOrFail(['id','event_id','name', 'created_at']);
         $event = Event::query()->where('id', $album->event_id)->firstOrFail(['id','uuid','name','public_url']);
 
         $perPage = $request->query('per_page', 24);
@@ -140,7 +140,6 @@ class AlbumController extends Controller
                 'event_uuid' => $event->uuid,
                 'event_name' => $event->name,
                 'public_url' => $event->public_url,
-                'uploader_url' => $album->uploader_url,
             ],
             'photos' => $photos->map(function($p){
                 return [
