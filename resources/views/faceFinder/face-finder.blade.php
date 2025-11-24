@@ -161,6 +161,7 @@
                             <div class="mt-4 flex items-center justify-end">
                                 <button
                                     type="button"
+                                    data-force-consent
                                     @click="proceedPhotos()"
                                     :disabled="!selectedEventUuid || selectedEventUuid === '' || !selectedAlbumId || uploading"
                                     class="px-6 py-3 rounded-xl font-semibold inline-flex items-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"

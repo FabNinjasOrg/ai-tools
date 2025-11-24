@@ -504,4 +504,9 @@ class FaceFinderController extends Controller
     {
         return view('faceFinder.faq');
     }
+
+    public function privacyPolicy()
+    {
+        return view('faceFinder.privacy-policy');
+    }
 }

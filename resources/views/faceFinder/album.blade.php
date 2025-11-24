@@ -102,7 +102,7 @@
                             </div>
                             <h3 class="text-lg font-semibold text-slate-900 mb-2">No photos in this album</h3>
                             <p class="text-slate-500 text-sm mb-6 max-w-md">Upload photos to get started.</p>
-                            <button type="button" @click="openUploadModal()"
+                            <button type="button" data-force-consent @click="openUploadModal()"
                                 class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-all inline-flex items-center gap-2 shadow-md hover:shadow-lg">
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                     stroke-width="2">
@@ -391,7 +391,7 @@
 
         <!-- Floating Upload Photos Button - Only on Album page -->
         <div class="fixed bottom-6 right-6 z-50">
-            <button type="button" @click="openUploadModal()"
+            <button type="button" data-force-consent @click="openUploadModal()"
                 class="h-14 w-14 rounded-full bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 inline-flex items-center justify-center shadow-lg hover:shadow-xl transition-all transform hover:scale-110"
                 title="Upload Photos">
                 <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">

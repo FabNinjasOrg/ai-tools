@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
 use App\Models\User;
 use App\Models\UserSubscription;
+use App\Http\Controllers\UserConsentController;
+use Illuminate\Http\Request;
 
 class GoogleAuthController extends Controller
 {
@@ -14,7 +16,7 @@ class GoogleAuthController extends Controller
         return Socialite::driver('google')->redirect();
     }
 
-    public function handleGoogleCallback()
+    public function handleGoogleCallback(Request $request)
     {
         try {
             $googleUser = Socialite::driver('google')->user();
@@ -52,6 +54,9 @@ class GoogleAuthController extends Controller
 
             // Login the user
             Auth::login($user);
+
+            // Sync consent from cookie to database
+            UserConsentController::syncConsentFromCookie($user->id);
 
             return redirect()->route('face_finder.upload_photos');
         } catch (\Exception $e) {

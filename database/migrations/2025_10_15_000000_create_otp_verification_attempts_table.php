@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('otp_verification_attempts', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('event_id')->index();
-            $table->string('album_uuid')->index();
+            $table->string('event_uuid')->index();
             $table->string('phone_number', 32)->nullable();
             $table->string('ip_address', 45)->nullable();
             $table->string('user_agent', 512)->nullable();

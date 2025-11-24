@@ -112,7 +112,7 @@
                         class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4">
                         <!-- Scan Again Button -->
                         <div class="mb-4 flex justify-center">
-                            <button @click="openCamera()"
+                                <button @click="openCamera()" data-force-consent
                                 class="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium shadow hover:from-blue-700 hover:to-indigo-700 inline-flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -227,7 +227,7 @@
                         <!-- Step 2: Camera Button and Info -->
                         <template x-if="showUnlockStep">
                             <div class="flex flex-col items-center space-y-4">
-                                <button @click="openCamera()"
+                        <button @click="openCamera()" data-force-consent
                                     class="px-6 py-4 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium shadow hover:from-green-700 hover:to-emerald-700 inline-flex items-center gap-3">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
                                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -670,7 +670,7 @@
                     try {
                         const formData = new FormData();
                         formData.append('photo', blob, 'captured-photo.jpg');
-                        formData.append('album_uuid', this.uuid);
+                        formData.append('event_uuid', this.uuid);
 
                         const response = await fetch('{{ route('face_finder.public.find_photos') }}', {
                             method: 'POST',

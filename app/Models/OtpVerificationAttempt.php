@@ -13,7 +13,7 @@ class OtpVerificationAttempt extends Model
 
     protected $fillable = [
         'event_id',
-        'album_uuid',
+        'event_uuid',
         'phone_number',
         'ip_address',
         'user_agent',

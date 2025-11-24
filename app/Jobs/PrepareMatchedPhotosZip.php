@@ -96,7 +96,7 @@ class PrepareMatchedPhotosZip implements ShouldQueue
             // Save S3 URL to OTP attempt table
             $otpAttempt = OtpVerificationAttempt::query()
                 ->where('session_token', $this->sessionToken)
-                ->where('album_uuid', $this->eventUuid)
+                ->where('event_uuid', $this->eventUuid)
                 ->first();
 
             if ($otpAttempt) {

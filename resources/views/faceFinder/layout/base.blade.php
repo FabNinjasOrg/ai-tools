@@ -76,10 +76,11 @@
             });
         </script>
     </head>
-    <body class="@yield('body-class', 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 text-slate-900 min-h-screen flex flex-col')">
+    <body class="@yield('body-class', 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 text-slate-900 min-h-screen flex flex-col')" data-public-page="{{ request()->is('face-finder/public/*') ? 'true' : 'false' }}" data-has-otp-session="{{ request()->is('face-finder/public/*') && request()->cookie('otp_session_token') ? 'true' : 'false' }}">
         @yield('body')
 
         @include('faceFinder.layout.upload-progress-panel')
+        @includeWhen(!request()->routeIs('face_finder.uploader.show'), 'faceFinder.components.public-consent')
     </body>
     @yield('scripts')
 </html>

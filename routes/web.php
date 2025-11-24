@@ -10,6 +10,7 @@ use App\Http\Controllers\publicLinkController;
 use App\Http\Controllers\StorageController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\uploaderLinkController;
+use App\Http\Controllers\UserConsentController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken as MiddlewareVerifyCsrfToken;
 
@@ -36,11 +37,11 @@ Route::prefix('face-finder')->group(function () {
     // few common route
     Route::get('/', [FaceFinderController::class, 'faceFinder'])->name('face_finder');
     Route::get('/pricing', [SubscriptionController::class, 'pricing'])->name('face_finder.pricing');
+    Route::get('/privacy-policy', [FaceFinderController::class, 'privacyPolicy'])->name('face_finder.privacy_policy');
 
     Route::middleware('auth')->group(function () {
         Route::get('upload-photos', [FaceFinderController::class, 'uploadPhotosPage'])->name('face_finder.upload_photos');
         Route::post('update-country-code', [FaceFinderController::class, 'updateCountryCode'])->name('face_finder.update_country_code');
-
         // Events routes
         Route::get('events', [EventController::class, 'index'])->name('face_finder.events.index');
         Route::get('load-events', [EventController::class, 'loadEvents'])->name('face_finder.load_events');
@@ -83,6 +84,9 @@ Route::prefix('face-finder')->group(function () {
 
         // FAQ route
         Route::get('faq', [FaceFinderController::class, 'faq'])->name('face_finder.faq');
+
+        // User consent route
+        Route::post('save-consent', [UserConsentController::class, 'saveUserConsent'])->name('face_finder.save_consent');
     });
 
     // uploader link routes
@@ -102,6 +106,9 @@ Route::prefix('face-finder/public')->group(function () {
     Route::post('{uuid}/otp-verified', [publicLinkController::class, 'checkOtpSession'])->name('face_finder.public.otp_verified');
     Route::post('{uuid}/download-matched-photos-zip', [publicLinkController::class, 'downloadMatchedPhotosZip'])->name('face_finder.public.download_matched_photos_zip');
     Route::get('{name}/{uuid}', [publicLinkController::class, 'publicEventPage'])->name('face_finder.public.show');
+
+    // Guest consent route
+    Route::post('save-guest-consent', [UserConsentController::class, 'saveGuestConsent'])->name('face_finder.public.save_guest_consent');
 });
 
 // Authentication routes (added by Laravel Breeze) with face-finder URL prefix

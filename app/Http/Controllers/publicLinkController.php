@@ -54,7 +54,7 @@ class publicLinkController extends Controller
                 // Create new attempt
                 OtpVerificationAttempt::create([
                     'event_id' => $event->id,
-                    'album_uuid' => $event->uuid,
+                    'event_uuid' => $event->uuid,
                     'phone_number' => $phoneNumber,
                     'ip_address' => $request->ip(),
                     'user_agent' => substr($request->userAgent() ?? '', 0, 512),
@@ -84,12 +84,12 @@ class publicLinkController extends Controller
     {
         $request->validate([
             'photo' => 'required|image|mimes:jpeg,png,jpg',
-            'album_uuid' => 'required|string|exists:events,uuid',
+            'event_uuid' => 'required|string|exists:events,uuid',
         ]);
 
         $photo = $request->file('photo');
 
-        $eventUuid = $request->input('album_uuid');
+        $eventUuid = $request->input('event_uuid');
 
         // Get event info
         $event = Event::query()->where('uuid', $eventUuid)->firstOrFail();

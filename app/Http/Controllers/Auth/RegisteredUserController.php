@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\UserConsentController;
 use App\Models\User;
 use App\Models\UserSubscription;
 use Illuminate\Auth\Events\Registered;
@@ -53,6 +54,8 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
 
         Auth::login($user);
+
+        UserConsentController::syncConsentFromCookie($user->id);
 
         return redirect(route('face_finder.upload_photos'));
     }
