@@ -18,8 +18,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: laravel_ai_app
-    extra_hosts:
-      - "model-runner.docker.internal:host-gateway"
+    # extra_hosts:
+    #   - "model-runner.docker.internal:host-gateway"
     volumes:
       - ./:/var/www
       - ./local.ini:/usr/local/etc/php/conf.d/local.ini
@@ -28,10 +28,10 @@ services:
         condition: service_started
     networks:
       - laravel-net
-    models:
-      llm:        
-        endpoint_var: AI_MODEL_URL
-        model_var: AI_MODEL_NAME
+    # models:
+    #   llm:
+    #     endpoint_var: AI_MODEL_URL
+    #     model_var: AI_MODEL_NAME
 
   mysql-test:
     image: mysql:8.0
@@ -45,7 +45,7 @@ services:
     volumes:
       - db_data:/var/lib/mysql
     networks:
-      - laravel-net        
+      - laravel-net
 
   cron:
       build:
@@ -72,9 +72,9 @@ services:
     depends_on:
       - app
 
-models:
-  llm:
-    model: ai/llama3.2:latest
+# models:
+#   llm:
+#     model: ai/llama3.2:latest
 
 volumes:
   db_data:
