@@ -373,7 +373,6 @@ class FaceFinderController extends Controller
 
         $batch = Bus::batch($batchJobs)
             ->name($batchName)
-            ->onQueue('high')
             ->then(function (Batch $batch) {
                 UploadSession::where('batch_id', $batch->id)
                     ->update([
@@ -448,7 +447,6 @@ class FaceFinderController extends Controller
 
         $batch = Bus::batch($batchJobs)
             ->name($batchName)
-            ->onQueue('high')
             ->then(function (Batch $batch) {
                 UploadSession::where('batch_id', $batch->id)
                     ->update([

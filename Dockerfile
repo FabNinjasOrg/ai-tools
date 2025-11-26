@@ -1,62 +1,78 @@
-# Use PHP 8.2 FPM image
+# Step 1: Composer dependencies
+
+FROM composer:2.6 AS vendor
+
+WORKDIR /app
+
+COPY composer.json composer.lock ./
+RUN composer install \
+    --prefer-dist \
+    --no-interaction \
+    --no-scripts \
+    --optimize-autoloader
+
+# Step 2: Node build (Vite)
+
+FROM node:18-alpine AS node_builder
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+# Step 3: PHP-FPM
+
 FROM php:8.2-fpm
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+WORKDIR /var/www/html
+
+# Install required system packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
-    zip \
-    curl \
     git \
     libzip-dev \
     libicu-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev \
+    libwebp-dev \
+    libfreetype6-dev \
     libonig-dev \
     libxml2-dev \
-    cron \
-    supervisor \
-    busybox \
-    wget \
-    gnupg \
     libmagickwand-dev \
     imagemagick \
     ghostscript \
-    nodejs \
-    npm \
-    poppler-utils \
-    && docker-php-ext-install \
-        pdo \
-        pdo_mysql \
-        zip \
-        intl \
-        mbstring \
-        bcmath \
+    cron \
+    busybox \
+    supervisor \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install pdo pdo_mysql zip intl mbstring bcmath gd \
     && pecl install imagick \
     && docker-php-ext-enable imagick \
     && rm -rf /var/lib/apt/lists/*
 
-# Match www-data to host user
-RUN usermod -u 1000 www-data && groupmod -g 1000 www-data
-
-# Install Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-
-# Set working directory
-WORKDIR /var/www
-
-# Copy everything
+# Copy application code
 COPY . .
 
-# Set Laravel writable directories
-RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache \
-    && chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+# Copy vendor from step 1
+COPY --from=vendor /app/vendor ./vendor
+
+# Copy built frontend assets
+COPY --from=node_builder /app/public ./public
+
+# Add custom php.ini settings
+COPY docker/local.ini /usr/local/etc/php/conf.d/local.ini
 
 # Copy supervisor config
 COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Setup cron job
-RUN echo "* * * * * cd /var/www && busybox sh -c '/usr/local/bin/php artisan schedule:run >> /var/www/storage/logs/cron.log 2>&1'" | crontab -
+# Create necessary Laravel directories permissions
+RUN chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
 
-# Expose PHP-FPM port (matches Nginx fastcgi_pass)
+# Expose PHP-FPM port
 EXPOSE 9000
 
-# Start supervisor
-CMD ["/usr/bin/supervisord", "-n"]
+CMD ["php-fpm"]

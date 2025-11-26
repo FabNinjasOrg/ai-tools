@@ -118,7 +118,7 @@ class ProcessDirectPhotoUploadJob implements ShouldQueue
      */
     private function EmbeddingTheImage(string $path)
     {
-        $baseUrl = env('FASTAPI_BASE_URL', 'http://fastapi:8005');
+        $baseUrl = env('FASTAPI_BASE_URL', 'http://face-recognition-apis:8005');
 
         try {
             $response = Http::attach('file', file_get_contents($path), basename($path))

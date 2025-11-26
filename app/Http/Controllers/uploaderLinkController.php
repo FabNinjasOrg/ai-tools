@@ -203,7 +203,6 @@ class uploaderLinkController extends Controller
 
         foreach ($validated['emails'] as $email) {
             $mail = new UploaderLinkShareMail($album->name, $uploaderLink->url, $uploaderLink->passcode);
-            $mail->onQueue('high');
             Mail::to($email)->queue($mail);
         }
 
