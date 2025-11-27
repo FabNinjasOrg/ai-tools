@@ -45,34 +45,34 @@ services:
     depends_on:
       app:
         condition: service_started
-      # face-recognition-apis:
-      #   condition: service_healthy
+      face-recognition-apis:
+        condition: service_healthy
     volumes:
       - app_data:/var/www/html
     networks:
       - laravel-net
 
-  # face-recognition-apis:
-  #   build:
-  #     context: ./fast-api-face-rec
-  #     dockerfile: Dockerfile
-  #   container_name: face_recognition_apis
-  #   ports:
-  #     - "8005:8005"
-  #   networks:
-  #     - laravel-net
-  #   depends_on:
-  #     - app
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:8005/docs"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 10
-  #     start_period: 60s
+  face-recognition-apis:
+    build:
+      context: ./fast-api-face-rec
+      dockerfile: Dockerfile
+    container_name: face_recognition_apis
+    ports:
+      - "8005:8005"
+    networks:
+      - laravel-net
+    depends_on:
+      - app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/docs"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
 
 volumes:
   db_data:
-  app_data:  
+  app_data:
 
 networks:
   laravel-net:
