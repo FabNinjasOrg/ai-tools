@@ -13,7 +13,7 @@ RUN composer install \
 
 # Step 2: Node build (Vite)
 
-FROM node:18-alpine AS node_builder
+FROM node:20-slim AS node_builder
 
 WORKDIR /app
 
