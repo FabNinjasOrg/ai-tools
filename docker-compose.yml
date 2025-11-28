@@ -6,7 +6,7 @@ services:
     image: face_finder_app
     container_name: face_finder_app
     volumes:
-      - app_data:/var/www/html
+      - ./:/var/www/html
     depends_on:
       - mysql
     networks:
@@ -18,7 +18,7 @@ services:
     ports:
       - "80:80"
     volumes:
-      - app_data:/var/www/html
+      - ./:/var/www/html
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - app
@@ -48,7 +48,7 @@ services:
       face-recognition-apis:
         condition: service_healthy
     volumes:
-      - app_data:/var/www/html
+      - ./:/var/www/html
     networks:
       - laravel-net
 
