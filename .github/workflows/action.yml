@@ -50,16 +50,16 @@ jobs:
           script: |
             set -e
 
-            cd /ai-tools
+            cd /home/ubuntu/ai-tools
 
             # Pull new images
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/face_finder_app:latest
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/face_recognition_apis:latest
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/face_finder_app:latest
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/face_recognition_apis:latest
 
             # Restart containers
-            docker compose down
-            docker compose up -d
+            sudo docker compose down
+            sudo docker compose up -d
 
             # Run migrations + clear cache
-            docker compose exec -T app php artisan migrate --force || true
-            docker compose exec -T app php artisan optimize:clear || true
+            sudo docker compose exec -T app php artisan migrate --force || true
+            sudo docker compose exec -T app php artisan optimize:clear || true
