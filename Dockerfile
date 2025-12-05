@@ -31,6 +31,7 @@ WORKDIR /var/www/html
 
 # Install required system packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
     unzip \
     git \
     libzip-dev \
@@ -51,6 +52,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && docker-php-ext-install pdo pdo_mysql zip intl mbstring bcmath gd \
     && pecl install imagick \
     && docker-php-ext-enable imagick \
+    && curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/awscliv2.zip" \
+    && unzip /awscliv2.zip \
+    && ./aws/install \
+    && rm -rf /aws /awscliv2.zip \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy application code
@@ -68,11 +73,18 @@ COPY docker/local.ini /usr/local/etc/php/conf.d/local.ini
 # Copy supervisor config
 COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Copy entrypoint script
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 # Create necessary Laravel directories permissions
 RUN chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
 # Expose PHP-FPM port
 EXPOSE 9000
+
+# Entrypoint script execution
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 CMD ["php-fpm"]
