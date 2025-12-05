@@ -57,7 +57,7 @@ jobs:
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/face_recognition_apis:latest
 
             # Deploy docker warm stack
-            sudo docker stack deploy -c docker-stack.yml facefinder
+            sudo docker stack deploy -c docker-stack.yml facefinder || true
 
             # Adding loop here to check if the service is running before proceeding
             SERVICE_NAME="facefinder_app"
@@ -76,7 +76,19 @@ jobs:
               sleep 3
             done
 
-            APP_CONTAINER=$(sudo docker ps --filter "name=${SERVICE_NAME}" -q | head -n 1)
+            APP_CONTAINER=""
+
+            while true; do
+              APP_CONTAINER=$(sudo docker ps --filter "name=${SERVICE_NAME}" -q | head -n 1)
+
+              if [ -n "$APP_CONTAINER" ]; then
+                echo "App container detected: $APP_CONTAINER"
+                break
+              fi
+
+              echo "Waiting for app container to appear..."
+              sleep 3
+            done
 
             echo "Running migrations..."
             sudo docker exec $APP_CONTAINER php artisan migrate --force || true
