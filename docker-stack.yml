@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
 
-  app:
+  face_finder_app:
     image: harshfabninjas/face_finder_app:latest
     networks:
       - laravel-net

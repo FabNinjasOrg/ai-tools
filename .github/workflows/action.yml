@@ -60,7 +60,7 @@ jobs:
             sudo docker stack deploy -c docker-stack.yml facefinder || true
 
             # Adding loop here to check if the service is running before proceeding
-            SERVICE_NAME="facefinder_app"
+            SERVICE_NAME="facefinder_face_finder_app"
 
             while true; do
               RUNNING=$(sudo docker service ps $SERVICE_NAME \
@@ -79,7 +79,7 @@ jobs:
             APP_CONTAINER=""
 
             while true; do
-              APP_CONTAINER=$(sudo docker ps --filter "name=${SERVICE_NAME}" -q | head -n 1)
+              APP_CONTAINER=$(sudo docker ps --filter "name=face_finder_app" -q | head -n 1)
 
               if [ -n "$APP_CONTAINER" ]; then
                 echo "App container detected: $APP_CONTAINER"
