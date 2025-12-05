@@ -15,9 +15,6 @@ services:
         parallelism: 1
         delay: 30s
         order: start-first
-      placement:
-        constraints:
-          - node.role == worker
 
   nginx:
     image: nginx:stable-alpine
@@ -34,9 +31,6 @@ services:
         max_attempts: 2
       update_config:
         order: start-first
-      placement:
-        constraints:
-          - node.role == worker
 
   mysql:
     image: mysql:8.0
@@ -68,9 +62,6 @@ services:
         max_attempts: 2
       update_config:
         order: start-first
-      placement:
-        constraints:
-          - node.role == worker
 
   face-recognition-apis:
     image: harshfabninjas/face_recognition_apis:latest
@@ -93,9 +84,6 @@ services:
         parallelism: 1
         delay: 30s
         order: start-first
-      placement:
-        constraints:
-          - node.role == worker
 
 volumes:
   db_data:
