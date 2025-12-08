@@ -57,7 +57,10 @@ jobs:
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/face_recognition_apis:latest
 
             # Deploy docker warm stack
-            sudo docker stack deploy -c docker-stack.yml facefinder || true
+            sudo docker stack deploy \
+              --with-registry-auth \
+              --resolve-image always \
+              -c docker-stack.yml facefinder || true
 
             # Adding loop here to check if the service is running before proceeding
             SERVICE_NAME="facefinder_face_finder_app"
