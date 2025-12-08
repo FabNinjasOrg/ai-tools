@@ -7,8 +7,10 @@ SSM_PATH="/facefinder/"
 
 # Fetch parameters
 PARAMS=$(aws ssm get-parameters-by-path \
+    --region ap-south-1 \
     --path "$SSM_PATH" \
     --with-decryption \
+    --recursive \
     --query "Parameters[*].[Name,Value]" \
     --output text)
 
@@ -21,7 +23,7 @@ touch $ENV_FILE
 # Convert SSM results into KEY=VALUE format
 while IFS=$'\t' read -r name value; do
     key=$(basename "$name")
-    echo "$key=$value" >> $ENV_FILE
+    echo "$key=$(printf '%q' "$value")" >> $ENV_FILE
 done <<< "$PARAMS"
 
 # End of script

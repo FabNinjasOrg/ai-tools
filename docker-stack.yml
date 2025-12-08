@@ -41,6 +41,8 @@ services:
       - db_data:/var/lib/mysql
     networks:
       - laravel-net
+    ports:
+      - "3306:3306"
     deploy:
       replicas: 1
       restart_policy:
