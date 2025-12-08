@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# If public volume is empty, copy built public folder
+if [ ! -f /var/www/html/public/index.php ]; then
+  echo "Initializing public volume..."
+  cp -R /var/www/html/public.bak/* /var/www/html/public/
+fi
+
 APP="facefinder"
 REGION="ap-south-1"
 SSM_PATH="/$APP/"
