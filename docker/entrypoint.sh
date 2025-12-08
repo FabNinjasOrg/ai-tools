@@ -1,9 +1,16 @@
+#!/bin/sh
 set -e
 
-# This is the script for loading environment variables from AWS SSM Parameter Store
+echo "Starting SSM env loader..."
 
-# Path
+# Path in SSM
 SSM_PATH="/facefinder/"
+
+# Check AWS CLI
+if ! command -v aws >/dev/null 2>&1; then
+  echo "ERROR: aws CLI not found inside container"
+  exit 1
+fi
 
 # Fetch parameters
 PARAMS=$(aws ssm get-parameters-by-path \
@@ -14,18 +21,21 @@ PARAMS=$(aws ssm get-parameters-by-path \
     --query "Parameters[*].[Name,Value]" \
     --output text)
 
-# Creating .env file inside container
-
+# .env file location
 ENV_FILE="/var/www/html/.env"
-rm -f $ENV_FILE
-touch $ENV_FILE
+
+# Create fresh .env file
+rm -f "$ENV_FILE"
+touch "$ENV_FILE"
+chmod 600 "$ENV_FILE"
 
 # Convert SSM results into KEY=VALUE format
-while IFS=$'\t' read -r name value; do
+echo "$PARAMS" | while IFS=$'\t' read -r name value; do
     key=$(basename "$name")
-    echo "$key=$(printf '%q' "$value")" >> $ENV_FILE
-done <<< "$PARAMS"
+    echo "$key=$value" >> "$ENV_FILE"
+done
 
-# End of script
+echo ".env created successfully from SSM"
 
+# Hand over control to the main container command
 exec "$@"

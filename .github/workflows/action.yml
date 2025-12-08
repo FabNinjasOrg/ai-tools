@@ -15,6 +15,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Fix entrypoint line endings
+        run: sed -i 's/\r$//' docker/entrypoint.sh
+
       # STEP 2 — Login to Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -82,7 +85,7 @@ jobs:
             APP_CONTAINER=""
 
             while true; do
-              APP_CONTAINER=$(sudo docker ps --filter "name=face_finder_app" -q | head -n 1)
+              APP_CONTAINER=$(sudo docker ps --filter "name=facefinder_face_finder_app" -q | head -n 1)
 
               if [ -n "$APP_CONTAINER" ]; then
                 echo "App container detected: $APP_CONTAINER"
