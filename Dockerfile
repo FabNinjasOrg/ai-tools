@@ -81,11 +81,6 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 RUN chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# Force PHP-FPM to listen on all network interfaces, not just localhost
-RUN sed -i 's|^listen = .*|listen = 0.0.0.0:9000|g' /usr/local/etc/php-fpm.d/*.conf \
- && sed -i 's|^listen.allowed_clients = .*||g' /usr/local/etc/php-fpm.d/*.conf \
- && sed -i 's|^;listen.allowed_clients = .*||g' /usr/local/etc/php-fpm.d/*.conf
-
 # Expose PHP-FPM port
 EXPOSE 9000
 
