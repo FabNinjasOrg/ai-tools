@@ -96,8 +96,10 @@ jobs:
               sleep 3
             done
 
+            sleep 20
+
             echo "Running migrations..."
-            sudo docker exec $APP_CONTAINER php artisan migrate --force || true
+            sudo docker exec $APP_CONTAINER php artisan migrate --force
 
             echo "Running optimize clear..."
-            sudo docker exec $APP_CONTAINER php artisan optimize:clear || true
+            sudo docker exec $APP_CONTAINER php artisan optimize:clear

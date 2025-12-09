@@ -1,12 +1,6 @@
 #!/bin/bash
 set -e
 
-# If public volume is empty, copy built public folder
-if [ ! -f /var/www/html/public/index.php ]; then
-  echo "Initializing public volume..."
-  cp -R /var/www/html/public.bak/* /var/www/html/public/
-fi
-
 APP="facefinder"
 REGION="ap-south-1"
 SSM_PATH="/$APP/"
@@ -23,6 +17,8 @@ fi
 
 rm -f "$ENV_FILE"
 touch "$ENV_FILE"
+
+chown www-data:www-data "$ENV_FILE"
 chmod 600 "$ENV_FILE"
 
 SSM_PARAMETER_NAMES=$(aws ssm get-parameters-by-path \

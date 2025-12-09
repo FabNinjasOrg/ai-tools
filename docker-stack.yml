@@ -4,6 +4,8 @@ services:
 
   face_finder_app:
     image: harshfabninjas/face_finder_app:latest
+    volumes:
+      - public_data:/var/www/html/public
     networks:
       - laravel-net
     deploy:
@@ -22,6 +24,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - public_data:/var/www/html/public:ro
     networks:
       - laravel-net
     deploy:
@@ -89,6 +92,7 @@ services:
 
 volumes:
   db_data:
+  public_data:
 
 networks:
   laravel-net:
