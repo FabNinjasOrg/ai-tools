@@ -11,39 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # STEP 1 — Checkout code
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Fix entrypoint line endings
-        run: sed -i 's/\r$//' docker/entrypoint.sh
-
-      # STEP 2 — Login to Docker Hub
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # STEP 3 — Build app image
-      - name: Build app image
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/face_finder_app:latest .
-
-      # STEP 4 — Build face-recognition-apis image
-      - name: Build face-recognition-apis image
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/face_recognition_apis:latest ./fast-api-face-rec
-
-      # STEP 5 — Push both images
-      - name: Push app image
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/face_finder_app:latest
-
-      - name: Push face-recognition image
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/face_recognition_apis:latest
-
-      # STEP 6 — Deploy on EC2
-      - name: Deploy to EC2 via SSH
+      - name: Run Artisan Commands on EC2 docker container
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -53,53 +21,21 @@ jobs:
           script: |
             set -e
 
-            cd /home/ubuntu/ai-tools
-
-            # Pull new images
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/face_finder_app:latest
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/face_recognition_apis:latest
-
-            # Deploy docker warm stack
-            sudo docker stack deploy \
-              --with-registry-auth \
-              --resolve-image always \
-              -c docker-stack.yml facefinder || true
-
-            # Adding loop here to check if the service is running before proceeding
-            SERVICE_NAME="facefinder_face_finder_app"
+            echo "Checking if face_finder_app container is running..."
 
             while true; do
-              RUNNING=$(sudo docker service ps $SERVICE_NAME \
-                          --filter "desired-state=running" \
-                          --format "{{.CurrentState}}" | grep -c "Running")
-
-              if [ "$RUNNING" -ge 1 ]; then
-                echo "Container running"
+              if sudo docker ps --format '{{.Names}}' | grep -q '^face_finder_app$'; then
+                echo "face_finder_app is now running"
                 break
               fi
 
-              echo "Waiting for container to reach Running state..."
-              sleep 3
+              sleep 5
             done
 
-            APP_CONTAINER=""
-
-            while true; do
-              APP_CONTAINER=$(sudo docker ps --filter "name=facefinder_face_finder_app" -q | head -n 1)
-
-              if [ -n "$APP_CONTAINER" ]; then
-                echo "App container detected: $APP_CONTAINER"
-                break
-              fi
-
-              echo "Waiting for app container to appear..."
-              sleep 3
-            done
-
-            sleep 20
+            echo "face_finder_app container is running"
 
             echo "Running migrations..."
-            sudo docker exec $APP_CONTAINER php artisan migrate --force
+            sudo docker exec face_finder_app php artisan migrate --force
 
             echo "Running optimize clear..."
-            sudo docker exec $APP_CONTAINER php artisan optimize:clear
+            sudo docker exec face_finder_app php artisan optimize:clear
