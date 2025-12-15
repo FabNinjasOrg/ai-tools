@@ -3,7 +3,8 @@ name: CI/CD Build & Deploy
 on:
   push:
     branches:
-      - testing-facefinder
+      - main
+      - testing
   workflow_dispatch:
 
 jobs:
