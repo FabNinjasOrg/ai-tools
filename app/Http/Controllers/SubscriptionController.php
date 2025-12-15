@@ -83,7 +83,7 @@ class SubscriptionController extends Controller
 			]);
         } catch (\Exception $e){
             logger(['error' => 'Subscription failed: ' . $e->getMessage()]);
-			return redirect()->route('face_finder.manage_subscription')->withErrors('Subscription process failed: ' . $e->getMessage());
+			return redirect()->route('face_finder.buy_subscription')->withErrors('Subscription process failed: ' . $e->getMessage());
         }
     }
 
@@ -286,11 +286,20 @@ class SubscriptionController extends Controller
 
     public function manageSubscription()
     {
-        if (!userHasAccessibility()) {
+        $user = Auth::user();
+
+        if (!$user) {
+            return false;
+        }
+
+        $userSubscribed = $user->subscriptions()
+            ->where('type', 'subscription')
+            ->exists();
+
+        if (!($userSubscribed)) {
             return redirect()->route('face_finder.buy_subscription');
         }
 
-        $user = Auth::user();
         $currency = 'INR'; // Always INR regardless of country
 
         $currentSubscription = $user->subscriptions()

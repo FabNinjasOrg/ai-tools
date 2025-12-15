@@ -257,4 +257,22 @@
             });
         </script>
     @endif
+    @if ($errors->any())
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var serverError = @json($errors->first());
+                if (!serverError) return;
+
+                (function waitForAlpine() {
+                    try {
+                        if (window.Alpine && Alpine.store && Alpine.store('messages')) {
+                            Alpine.store('messages').showError(serverError, 0);
+                            return;
+                        }
+                    } catch (e) {}
+                    setTimeout(waitForAlpine, 50);
+                })();
+            });
+        </script>
+    @endif
 @endsection

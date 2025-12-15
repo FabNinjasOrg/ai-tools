@@ -93,7 +93,7 @@ if (!function_exists('userHasAccessibility')) {
             return false;
         }
 
-        $userOnTrial = $user->subscriptions()
+        $userSubscribed = $user->subscriptions()
             ->where('type', 'subscription')
             ->where('status', 'active')
             ->exists();
@@ -104,7 +104,7 @@ if (!function_exists('userHasAccessibility')) {
             ->whereDate('end_date', '>', now())
             ->exists();
 
-        return $userOnTrial || $userCancelButActive;
+        return $userSubscribed || $userCancelButActive;
     }
 }
 

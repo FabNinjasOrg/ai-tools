@@ -18,7 +18,7 @@ class SubscriptionPlanSeeder extends Seeder
             // Monthly Plans
             [
                 'name' => 'Basic Monthly',
-                'razorpay_plan_id' => null,
+                'razorpay_plan_id' => 'plan_RbBJXn4WELE4cl',
                 'storage' => '5GB',
                 'status' => 'active',
                 'created_at' => now(),
@@ -26,7 +26,7 @@ class SubscriptionPlanSeeder extends Seeder
             ],
             [
                 'name' => 'Standard Monthly',
-                'razorpay_plan_id' => null,
+                'razorpay_plan_id' => 'plan_RbBSDFcevGrKq6',
                 'storage' => '10GB',
                 'status' => 'active',
                 'created_at' => now(),
@@ -34,7 +34,7 @@ class SubscriptionPlanSeeder extends Seeder
             ],
             [
                 'name' => 'Pro Monthly',
-                'razorpay_plan_id' => null,
+                'razorpay_plan_id' => 'plan_RbBU89l7FBoLmM',
                 'storage' => '20GB',
                 'status' => 'active',
                 'created_at' => now(),
@@ -43,7 +43,7 @@ class SubscriptionPlanSeeder extends Seeder
             // Yearly Plans
             [
                 'name' => 'Basic Yearly',
-                'razorpay_plan_id' => null,
+                'razorpay_plan_id' => 'plan_RbBQf3O0rJgXIv',
                 'storage' => '5GB',
                 'status' => 'active',
                 'created_at' => now(),
@@ -51,7 +51,7 @@ class SubscriptionPlanSeeder extends Seeder
             ],
             [
                 'name' => 'Standard Yearly',
-                'razorpay_plan_id' => null,
+                'razorpay_plan_id' => 'plan_RbBSsFJ3jKOERj',
                 'storage' => '10GB',
                 'status' => 'active',
                 'created_at' => now(),
@@ -59,7 +59,7 @@ class SubscriptionPlanSeeder extends Seeder
             ],
             [
                 'name' => 'Pro Yearly',
-                'razorpay_plan_id' => null,
+                'razorpay_plan_id' => 'plan_RbBTYYqU3O7ooP',
                 'storage' => '20GB',
                 'status' => 'active',
                 'created_at' => now(),
