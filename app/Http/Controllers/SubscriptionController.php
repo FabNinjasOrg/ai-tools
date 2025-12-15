@@ -116,7 +116,7 @@ class SubscriptionController extends Controller
 
     public function handleRazorpayWebhook(Request $request)
     {
-        $webhookSecret = config('services.razorpay.webhook_secret');
+        $webhookSecret = env('RAZOR_PAY_WEBHOOK_SECRET');
         $signature = $request->header('X-Razorpay-Signature');
         $payload = $request->getContent();
 

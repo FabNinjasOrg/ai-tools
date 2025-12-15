@@ -41,8 +41,4 @@ return [
         ],
     ],
 
-    'razorpay' => [
-        'webhook_secret' => env('RAZOR_PAY_WEBHOOK_SECRET'),
-    ],
-
 ];
