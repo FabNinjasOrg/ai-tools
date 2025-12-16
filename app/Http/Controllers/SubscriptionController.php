@@ -64,6 +64,7 @@ class SubscriptionController extends Controller
                 'plan_id' => $plan->razorpay_plan_id,
                 'total_count' => 12,
                 'customer_notify' => true,
+                'customer_id' => $user->razorpay_customer_id,
                 'notes' => [
                     'user_id' => $user->id,
                     'plan_name' => $plan->name,
