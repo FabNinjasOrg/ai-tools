@@ -309,7 +309,13 @@ class publicLinkController extends Controller
                 return [
                     'id' => $photo->id,
                     'filename' => $photo->filename,
-                    'src' => Storage::disk('s3')->temporaryUrl($photo->path, now()->addDay()),
+                    'src' => Storage::disk('s3')->temporaryUrl(
+                        $photo->path,
+                        now()->addDay(),
+                        [
+                            'ResponseContentDisposition' => 'attachment; filename="' . basename($photo->filename) . '"',
+                        ]
+                    ),
                     'similarity' => ($percentageLookup[$photo->id] ?? 0) / 100,
                 ];
             })->toArray();

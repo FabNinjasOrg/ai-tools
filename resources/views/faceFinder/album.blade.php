@@ -5,16 +5,24 @@
 @section('content')
     <div x-data="albumPage({{ $albumId }}, '{{ $eventUuid }}', '{{ $albumName }}')" x-init="init()" x-cloak class="max-w-7xl mx-auto px-6">
         <div class="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-            <div class="flex items-center gap-3 text-xl md:text-xl">
+            <div class="flex items-center gap-3 text-lg md:text-lg">
                 <a href="{{ route('face_finder.events.index') }}"
-                    class="text-slate-600 hover:text-green-600 transition-colors">
+                    class="flex items-center gap-2 text-slate-600 hover:text-green-600 transition-colors">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
                     Events
                 </a>
-                >
+                <span class="text-slate-400">></span>
                 <a :href="'{{ route('face_finder.events.show', ['uuid' => 'UUID']) }}'.replace('UUID', eventUuid)"
-                    class="text-slate-600 hover:text-green-600 transition-colors" x-text="eventName"></a>
-                >
-                <h1 x-text="albumName"></h1>
+                    class="flex items-center gap-2 text-slate-600 hover:text-green-600 transition-colors" x-text="eventName"></a>
+                <span class="text-slate-400">></span>
+                <h1 class="flex items-center gap-2 text-slate-900">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    </svg>
+                    <span x-text="albumName"></span>
+                </h1>
             </div>
             <div class="flex items-center gap-2">
                 <a href="{{ route('face_finder.albums.index') }}"

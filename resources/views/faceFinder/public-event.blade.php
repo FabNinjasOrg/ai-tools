@@ -139,9 +139,9 @@
                                         <!-- bottom-left match badge -->
                                         <div class="absolute left-2 bottom-2 px-2 py-0.5 rounded-md text-[11px] font-medium bg-white/90 text-slate-800 shadow"
                                             x-text="`${Math.round(((photo.similarity || 0) * 100))}% Matched`"></div>
-                                        <!-- Hover download icon top-right -->
+
                                         <a :href="photo.src" target="_blank"
-                                            class="absolute top-2 right-2 hidden group-hover:flex items-center justify-center h-8 w-8 rounded-md bg-white/90 text-slate-700 shadow hover:bg-white"
+                                            class="absolute top-2 right-2 flex items-center justify-center h-8 w-8 rounded-md bg-white/90 text-slate-700 shadow hover:bg-white"
                                             title="Download">
                                             <!-- Download (arrow down into tray) icon -->
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24"
@@ -264,10 +264,17 @@
                     <div x-show="!showOTPInput" class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2">Phone Number</label>
-                            <input x-model="phoneNumber" @input="validatePhoneNumber" type="tel" placeholder="+1234567890"
-                                class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                                :disabled="isSendingOTP">
-                            <p class="text-xs text-slate-500 mt-1">Enter your phone number with country code</p>
+                            <div class="flex">
+                                <span
+                                    class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-slate-300 bg-slate-50 text-slate-700 text-sm">
+                                    +91
+                                </span>
+                                <input x-model="phoneNumber" @input="validatePhoneNumber" type="tel"
+                                    placeholder="1234567890"
+                                    class="w-full px-3 py-2 border border-slate-300 border-l-0 rounded-r-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                    :disabled="isSendingOTP">
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Enter your 10-digit Indian phone number. </p>
                             <div x-show="otpErrorMessage" x-cloak class="text-red-500 text-xs mt-1" x-text="otpErrorMessage"></div>
                             <div x-show="otpSuccessMessage" x-cloak class="text-green-500 text-xs mt-1" x-text="otpSuccessMessage"></div>
                         </div>
@@ -295,7 +302,7 @@
                                 class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-center text-lg tracking-widest"
                                 :disabled="isVerifyingOTP">
                             <p class="text-xs text-slate-500 mt-1">Enter the 6-digit code sent to <span
-                                    x-text="phoneNumber"></span></p>
+                                    x-text="'+' + '91 ' + phoneNumber"></span></p>
                             <div x-show="otpErrorMessage" x-cloak class="text-red-500 text-xs mt-1" x-text="otpErrorMessage"></div>
                             <div x-show="otpSuccessMessage" x-cloak class="text-green-500 text-xs mt-1" x-text="otpSuccessMessage"></div>
                         </div>
@@ -571,11 +578,12 @@
                         this.otpSuccessMessage = 'OTP verified successfully!';
                         this.otpErrorMessage = '';
 
-                        this.logOtpAttempt(this.phoneNumber);
+                        this.logOtpAttempt('+91' + this.phoneNumber);
 
                         // Close modal and show camera
                         this.closePhoneModal();
                         this.showUnlockStep = true;
+                        this.openCamera();
 
                     } catch (error) {
                         console.error('Error verifying OTP:', error);
@@ -596,8 +604,16 @@
                     this.otpErrorMessage = '';
 
                     if (this.phoneNumber && this.phoneNumber.length > 0) {
+                        this.phoneNumber = this.phoneNumber.replace(/\D/g, '');
+
+                        // Expect 10-digit Indian mobile number
+                        if (this.phoneNumber.length !== 10) {
+                            this.otpErrorMessage = 'Please enter a valid 10-digit Indian phone number';
+                            return;
+                        }
+
                         try {
-                            const phoneNumber = libphonenumber.parsePhoneNumber(this.phoneNumber);
+                            const phoneNumber = libphonenumber.parsePhoneNumber('+91' + this.phoneNumber, 'IN');
                             if (!phoneNumber || !phoneNumber.isValid()) {
                                 this.otpErrorMessage = 'Invalid phone number';
                             }
