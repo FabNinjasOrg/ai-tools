@@ -26,17 +26,14 @@ class UppyUploadManager {
     }
 
     init(inline) {
+        console.log('uppy init');
+
         const restrictions = {
             maxFileSize: 1024 * 1024 * 1024, // 1 GB max per file
             maxNumberOfFiles: null, // No limit on number of files
             allowedFileTypes: [
                 '.zip',
-                '.jpg',
-                '.jpeg',
-                '.png',
-                '.webp',
-                '.heic',
-                '.heif'
+                'image/*'
             ]
         };
 
