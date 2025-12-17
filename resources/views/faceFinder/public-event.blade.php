@@ -85,7 +85,7 @@
                     <div class="absolute inset-0 bg-white/40"></div>
                 </div>
                 <div class="relative z-10 h-full flex flex-col items-center justify-center space-y-4">
-                    <div x-show="matchedPhotos.length > 0" x-cloak class="mb-3 w-full flex justify-end items-center">
+                    {{-- <div x-show="matchedPhotos.length > 0" x-cloak class="mb-3 w-full flex justify-end items-center">
                         @if(userHasAccessibility())
                         <!-- Download Zip Button -->
                         <button @click="downloadMatchedPhotosZip()"
@@ -96,7 +96,7 @@
                             Download ZIP
                         </button>
                         @endif
-                    </div>
+                    </div> --}}
                     <div x-show="matchedPhotos.length > 0" x-cloak
                         class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4">
                         <!-- Scan Again Button -->
@@ -129,7 +129,7 @@
                                         <div class="absolute left-2 bottom-2 px-2 py-0.5 rounded-md text-[11px] font-medium bg-white/90 text-slate-800 shadow"
                                             x-text="`${Math.round(((photo.similarity || 0) * 100))}% Matched`"></div>
 
-                                        <a :href="photo.src" target="_blank"
+                                        <a :href="photo.src" :download="photo.filename || true"
                                             class="absolute top-2 right-2 flex items-center justify-center h-8 w-8 rounded-md bg-white/90 text-slate-700 shadow hover:bg-white"
                                             title="Download">
                                             <!-- Download (arrow down into tray) icon -->
@@ -147,14 +147,28 @@
                             </template>
                         </div>
 
-                        <!-- Matched Photos Count - Bottom Left -->
-                        <div class="mt-6 flex justify-start">
+                        <div class="mt-4 flex items-center justify-between gap-4">
                             <div class="inline-flex items-center gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
                                 <span class="text-sm font-medium text-slate-700"
                                     x-text="`${matchedPhotos.length} ${matchedPhotos.length === 1 ? 'photo' : 'photos'} found`"></span>
+                            </div>
+
+                            <div x-show="matchedPhotos.length > 0" x-cloak>
+                                <button @click="downloadAllPhotos()"
+                                    class="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium shadow hover:from-purple-700 hover:to-indigo-700 inline-flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5" />
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M7.5 12 12 16.5 16.5 12" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V3" />
+                                    </svg>
+                                    Download all photos
+                                </button>
                             </div>
                         </div>
 
@@ -765,6 +779,30 @@
                         console.error('Error starting ZIP preparation:', error);
                         this.setError('Failed to start ZIP preparation. Please try again.');
                     }
+                },
+
+                downloadAllPhotos() {
+                    if (!this.matchedPhotos || this.matchedPhotos.length === 0) {
+                        this.setError('No matched photos to download');
+                        return;
+                    }
+
+                    // Create a temporary download link for each photo and click it.
+                    this.matchedPhotos.forEach((photo, index) => {
+                        setTimeout(() => {
+                            try {
+                                const link = document.createElement('a');
+                                link.href = photo.src;
+                                link.download = photo.filename || `photo-${index + 1}.jpg`;
+                                link.style.display = 'none';
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            } catch (e) {
+                                console.warn('Failed to trigger download for a photo', e);
+                            }
+                        }, index * 300);
+                    });
                 },
 
                 // Message helpers
