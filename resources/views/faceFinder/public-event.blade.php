@@ -71,9 +71,9 @@
                     <span>Images will show only when the match is 40% or higher.</span>
                 </div>
             </div>
-            <div x-cloak class="mb-8 relative rounded-2xl h-[40vh] md:h-[50vh]">
+            <div x-cloak class="mb-8 relative rounded-2xl min-h-[60vh] md:min-h-[50vh] lg:min-h-[60vh]">
                 <!-- Blurred placeholder image shapes when locked -->
-                <div x-show="!matchedPhotos.length" class="absolute inset-0">
+                <div x-show="!matchedPhotos.length" class="absolute inset-0 z-0">
                     <div class="h-full w-full p-4">
                         <div class="grid grid-cols-2 grid-rows-2 gap-4 h-full w-full filter blur-sm opacity-80">
                             <div class="bg-slate-300/80 rounded-xl"></div>
@@ -147,8 +147,8 @@
                             </template>
                         </div>
 
-                        <div class="mt-4 flex items-center justify-between gap-4">
-                            <div class="inline-flex items-center gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+                        <div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div class="inline-flex items-center gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 w-full sm:w-auto">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
@@ -156,9 +156,9 @@
                                     x-text="`${matchedPhotos.length} ${matchedPhotos.length === 1 ? 'photo' : 'photos'} found`"></span>
                             </div>
 
-                            <div x-show="matchedPhotos.length > 0" x-cloak>
+                            <div x-show="matchedPhotos.length > 0" x-cloak class="w-full sm:w-auto">
                                 <button @click="downloadAllPhotos()"
-                                    class="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium shadow hover:from-purple-700 hover:to-indigo-700 inline-flex items-center gap-2">
+                                    class="w-full sm:w-auto px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium shadow hover:from-purple-700 hover:to-indigo-700 inline-flex items-center justify-center gap-2">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
                                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round"
