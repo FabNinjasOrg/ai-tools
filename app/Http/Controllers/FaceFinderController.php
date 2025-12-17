@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Bus\Batch;
 use Illuminate\Support\Facades\Log;
 use ZipArchive;
+use Imagick;
+use Illuminate\Http\UploadedFile;
 
 class FaceFinderController extends Controller
 {
@@ -63,24 +65,20 @@ class FaceFinderController extends Controller
             'zips' => 'nullable|array',
             'zips.*' => 'nullable|file|mimes:zip|max:1024000',
             'photos' => 'nullable|array',
-            'photos.*' => 'nullable|file|image|mimes:png,jpg,jpeg,webp',
+            'photos.*' => [
+                'nullable',
+                'file',
+                'mimes:png,jpg,jpeg,webp,heic,heif',
+                'mimetypes:image/jpeg,image/png,image/webp,image/heic,image/heif,application/octet-stream',
+            ],
             'album_id' => 'nullable|integer|exists:albums,id',
         ], [
             'photos.*.image' => 'All files must be valid images.',
-            'photos.*.mimes' => 'Photos must be in PNG, JPG, JPEG, or WEBP format.',
+            'photos.*.mimes' => 'Photos must be in PNG, JPG, JPEG, HEIC or WEBP format.',
         ]);
 
         $allZipFiles = $request->file('zips', []);
         $allPhotoFiles = $request->file('photos', []);
-
-        // if (!userHasAccessibility()) {
-        //     $existingEvent = Event::where('user_id', $userId)->first();
-        //     if ($existingEvent) {
-        //         return response()->json([
-        //             'message' => 'Trial users can create only one event. Please delete your existing event or upgrade your subscription.'
-        //         ], 422);
-        //     }
-        // }
 
         if(userHasAccessibility()){
             if(isUserStorageFull()){
@@ -154,6 +152,9 @@ class FaceFinderController extends Controller
         // Process photos
         $photoResult = null;
         if (!empty($allPhotoFiles)) {
+            // Convert the photos if photos type if HEIC/HEIF to supported format
+            $allPhotoFiles = $this->normalizePhotoTypes($allPhotoFiles);
+
             $photoResult = $this->uploadPhotosToAlbum($uuid, $allPhotoFiles, $albumId, $userId);
             if (!$photoResult) {
                 return response()->json([
@@ -182,9 +183,51 @@ class FaceFinderController extends Controller
         ], 422);
     }
 
+    private function normalizePhotoTypes($allPhotoFiles): array
+    {
+        foreach ($allPhotoFiles as $key => $file) {
+            if (!$file instanceof UploadedFile) {
+                continue;
+            }
+
+            $ext = strtolower($file->getClientOriginalExtension());
+
+            if (!in_array($ext, ['heic', 'heif'])) {
+                continue;
+            }
+
+            $originalName = pathinfo(
+                $file->getClientOriginalName(),
+                PATHINFO_FILENAME
+            );
+
+            $photoName = $originalName . '_' . uniqid() . '.jpg';
+
+            $image = new Imagick($file->getRealPath());
+
+            $image->autoOrient();
+            $image->setImageColorspace(Imagick::COLORSPACE_RGB);
+            $image->setImageFormat('jpeg');
+            $image->setImageCompressionQuality(95);
+
+            $path = storage_path('app/' . $photoName);
+            $image->writeImage($path);
+
+            $allPhotoFiles[$key] = new UploadedFile(
+                $path,
+                $photoName,
+                'image/jpeg',
+                null,
+                true
+            );
+        }
+
+        return $allPhotoFiles;
+    }
+
     private function validateZipFiles(array $zipFiles, int $userId): array
     {
-        $allowedExtensions = ['png', 'jpg', 'jpeg', 'webp'];
+        $allowedExtensions = ['png', 'jpg', 'jpeg', 'webp', 'heic', 'heif'];
         $totalPhotoCount = 0;
         $zipData = [];
 
@@ -252,10 +295,51 @@ class FaceFinderController extends Controller
                     ];
                 }
 
-                $photos[] = $zipEntryName;
+                // Extract file
+                $extractPath = $localTempDir . '/' . basename($zipEntryName);
+                file_put_contents($extractPath, $zip->getFromIndex($entryIndex));
+
+                // Convert the file if HEIC/HEIF type is there
+                if (in_array($fileExtension, ['heic', 'heif'])) {
+                    $jpgName = pathinfo($zipEntryName, PATHINFO_FILENAME) . '_' . uniqid() . '.jpg';
+                    $jpgPath = $localTempDir . '/' . $jpgName;
+
+                    $image = new Imagick($extractPath);
+                    $image->autoOrient();
+                    $image->setImageFormat('jpeg');
+                    $image->setImageCompressionQuality(95);
+                    $image->writeImage($jpgPath);
+
+                    unlink($extractPath); // remove HEIC
+
+                    $photos[] = $jpgName;
+                } else{
+                    $photos[] = basename($zipEntryName);
+                }
             }
 
             $zip->close();
+
+            // Recreate zip with only valid photos
+            @unlink($localTempZipPath); // delete original zip
+            $newZip = new ZipArchive();
+            $newZip->open($localTempZipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+            foreach ($photos as $photoName) {
+                $photoPath = $localTempDir . '/' . $photoName;
+
+                if (file_exists($photoPath)) {
+                    $newZip->addFile($photoPath, $photoName);
+                }
+            }
+
+            $newZip->close();
+
+            // Remove extracted photos from disk after re-zipping
+            foreach ($photos as $photoName) {
+                $photoPath = $localTempDir . '/' . $photoName;
+                @unlink($photoPath);
+            }
 
             // Validate ZIP contains photos
             if (empty($photos)) {

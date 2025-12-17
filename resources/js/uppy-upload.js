@@ -29,7 +29,15 @@ class UppyUploadManager {
         const restrictions = {
             maxFileSize: 1024 * 1024 * 1024, // 1 GB max per file
             maxNumberOfFiles: null, // No limit on number of files
-            allowedFileTypes: ['.zip', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+            allowedFileTypes: [
+                '.zip',
+                '.jpg',
+                '.jpeg',
+                '.png',
+                '.webp',
+                '.heic',
+                '.heif'
+            ]
         };
 
         // Create Uppy instance
@@ -51,7 +59,7 @@ class UppyUploadManager {
             hideUploadButton: shouldHideUploadButton,
             proudlyDisplayPoweredByUppy: false,
             showProgressDetails: true,
-            note: 'Upload ZIP files or photos (png, jpg, jpeg, webp). Max 1 GB per file.',
+            note: 'Upload ZIP files or photos (png, jpg, jpeg, webp, HEIC). Max 1 GB per file.',
             trigger: inline ? null : null,
             closeModalOnClickOutside: !inline,
             closeAfterFinish: false

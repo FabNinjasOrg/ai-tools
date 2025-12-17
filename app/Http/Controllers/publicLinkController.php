@@ -110,9 +110,17 @@ class publicLinkController extends Controller
             }
 
             // Prepare embeddings for FastAPI
-            $embeddings = $eventPhotos->map(function ($photo) {
-                return json_decode($photo->embedding_json, true);
-            })->filter()->values()->toArray();
+            $embeddings = [];
+            $photoIndexMap = [];
+
+            foreach ($eventPhotos as $key => $eventPhoto) {
+                $faces = json_decode($eventPhoto->embedding_json, true);
+
+                if (is_array($faces) && !empty($faces)) {
+                    $photoIndexMap[] = $eventPhoto; // same index as embeddings
+                    $embeddings[] = $faces;
+                }
+            }
 
             if (empty($embeddings)) {
                 // Update state with no matches
@@ -160,13 +168,12 @@ class publicLinkController extends Controller
             if (isset($comparisonResult['all_results']) && is_array($comparisonResult['all_results'])) {
                 foreach ($comparisonResult['all_results'] as $result) {
                     if (isset($result['index'])) {
-                        $matchPhoto = $eventPhotos->get($result['index']);
-                        if ($matchPhoto) {
+                        if (isset($photoIndexMap[$result['index']])) {
+                            $matchPhoto = $photoIndexMap[$result['index']];
+
                             $matchedPhotos->push([
                                 'id' => $matchPhoto->id,
-                                // 'filename' => $matchPhoto->filename,
-                                // 'src' => Storage::disk('s3')->temporaryUrl($matchPhoto->path, now()->addDay()),
-                                'similarity' => isset($result['similarity']) ? (float) $result['similarity'] : 0.0,
+                                'similarity' => (float) $result['similarity'],
                             ]);
                         }
                     }

@@ -85,18 +85,7 @@
                     <div class="absolute inset-0 bg-white/40"></div>
                 </div>
                 <div class="relative z-10 h-full flex flex-col items-center justify-center space-y-4">
-                    <div x-show="matchedPhotos.length > 0" x-cloak class="mb-3 w-full flex justify-between items-center">
-                        <div
-                            class="inline-flex items-center gap-2 rounded-xl border border-green-200 border-l-4 border-l-green-500 bg-green-50 px-3 py-1.5 text-[13px] text-green-800 shadow-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16Zm3.857-9.809a.75.75 0 10-1.214-.882l-3.483 4.79L7.36 10.4a.75.75 0 10-1.22.9l2.25 3.05a.75.75 0 001.2-.01l4.267-5.149z"
-                                    clip-rule="evenodd" />
-                            </svg>
-                            <span class="font-medium"
-                                x-text="`${matchedPhotos.length} matched ${matchedPhotos.length === 1 ? 'photo' : 'photos'}`"></span>
-                        </div>
-
+                    <div x-show="matchedPhotos.length > 0" x-cloak class="mb-3 w-full flex justify-end items-center">
                         @if(userHasAccessibility())
                         <!-- Download Zip Button -->
                         <button @click="downloadMatchedPhotosZip()"
@@ -156,6 +145,17 @@
                                     </div>
                                 </div>
                             </template>
+                        </div>
+
+                        <!-- Matched Photos Count - Bottom Left -->
+                        <div class="mt-6 flex justify-start">
+                            <div class="inline-flex items-center gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span class="text-sm font-medium text-slate-700"
+                                    x-text="`${matchedPhotos.length} ${matchedPhotos.length === 1 ? 'photo' : 'photos'} found`"></span>
+                            </div>
                         </div>
 
                         <!-- Load More Button -->
