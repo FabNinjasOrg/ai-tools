@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\PrepareMatchedPhotosZip;
+use App\Jobs\SendMatchedPhotosViaWhatappJob;
 use App\Models\Event;
 use App\Models\OtpVerificationAttempt;
 use App\Models\Photo;
 use Exception;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use ZipArchive;
 use Illuminate\Support\Facades\Http;
@@ -423,8 +425,44 @@ class publicLinkController extends Controller
             $message = $messages[0];
             $phoneNumber = $contacts[0]['wa_id'] ?? null;
             $userMessage = strtolower(trim($message['text']['body'] ?? ''));
-            
-            logger('usermessage ' . $userMessage);
+
+            if (preg_match('/^SEND\s+\d{6}$/', $userMessage)) {
+                logger('Valid message request for photos: ' . $userMessage);
+
+                $getUserSessionFromPhoneNumber = OtpVerificationAttempt::query()
+                    ->where('phone_number', $phoneNumber)
+                    ->where('matched_found_photos', '>', 0)
+                    ->first();
+
+                if($getUserSessionFromPhoneNumber){
+                    $matchedPhotos = $getUserSessionFromPhoneNumber->matched_photo_id_json ? json_decode($getUserSessionFromPhoneNumber->matched_photo_id_json, true) : [];
+
+                    if($matchedPhotos && !empty($matchedPhotos)){
+                        $photoIds = array_column($matchedPhotos, 'id');
+                        $jobs = [];
+
+                        foreach (array_chunk($photoIds, 10) as $chunk) {
+                            $jobs[] = new SendMatchedPhotosViaWhatappJob(
+                                $getUserSessionFromPhoneNumber->phone_number,
+                                $chunk
+                            );
+                        }
+
+                        if(!empty($jobs)){
+                            // Dispatch jobs in batch
+                            Bus::batch($jobs)
+                                ->name('Send matched photos via WhatsApp')
+                                ->dispatch();
+
+                            logger('Dispatched WhatsApp jobs for phone number: ' . $phoneNumber);
+                        }
+                    }
+                } else {
+                    logger('No matched photos found for phone number: ' . $phoneNumber);
+                }
+            }else{
+                logger('Invalid message format received: ' . $userMessage);
+            }
 
             return response()->json(['status' => 'fallback'], 200);
         } catch (Exception $e) {
