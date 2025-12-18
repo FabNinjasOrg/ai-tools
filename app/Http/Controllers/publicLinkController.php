@@ -466,11 +466,12 @@ class publicLinkController extends Controller
             $message = $messages[0];
             $phoneNumber = $contacts[0]['wa_id'] ?? null;
             $userMessage = trim($message['text']['body'] ?? '');
+            $code = '';
 
-            if (preg_match('/code:\s*([A-Za-z0-9]{15})/i', $userMessage)) {
-                logger('Valid message request for photos: ' . $userMessage);
+            if (preg_match('/code:\s*([A-Za-z0-9]{15})/i', $userMessage, $match)) {
+                $code = $match[1];
 
-                if($userMessage !== env('WHATSAPP_CODE_FOR_REQUEST_PHOTOS')){
+                if($code !== env('WHATSAPP_CODE_FOR_REQUEST_PHOTOS')){
                     logger('Invalid code received: ' . $userMessage);
                     return response()->json(['status' => 'invalid_webhook_code'], 200);
                 }
@@ -479,6 +480,14 @@ class publicLinkController extends Controller
                     ->where('phone_number', '+'.$phoneNumber)
                     ->where('matched_found_photos', '>', 0)
                     ->first();
+
+                if ($getUserSessionFromPhoneNumber->last_whatsapp_photos_request_at) {
+                    $minutes = now()->diffInMinutes($getUserSessionFromPhoneNumber->last_whatsapp_photos_request_at);
+
+                    if ($minutes < 60) {
+                        return response()->json(['status' => 'fallback'], 200);
+                    }
+                }
 
                 if($getUserSessionFromPhoneNumber){
                     $matchedPhotos = $getUserSessionFromPhoneNumber->matched_photo_id_json ? json_decode($getUserSessionFromPhoneNumber->matched_photo_id_json, true) : [];
