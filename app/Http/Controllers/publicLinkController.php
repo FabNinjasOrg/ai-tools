@@ -467,7 +467,7 @@ class publicLinkController extends Controller
             $phoneNumber = $contacts[0]['wa_id'] ?? null;
             $userMessage = trim($message['text']['body'] ?? '');
 
-            if (preg_match('/^[A-Za-z0-9]{15}$/', $userMessage)) {
+            if (preg_match('/code:\s*([A-Za-z0-9]{15})/i', $userMessage)) {
                 logger('Valid message request for photos: ' . $userMessage);
 
                 if($userMessage !== env('WHATSAPP_CODE_FOR_REQUEST_PHOTOS')){
