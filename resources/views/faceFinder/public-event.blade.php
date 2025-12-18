@@ -97,23 +97,23 @@
                         </button>
                         @endif
                     </div> --}}
+                    <!-- Scan Again Button (outside photos grid card) -->
+                    <div x-show="matchedPhotos.length > 0" x-cloak class="mb-4 flex justify-center w-full">
+                        <button @click="openCamera()" data-force-consent
+                            class="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium shadow hover:from-blue-700 hover:to-indigo-700 inline-flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            Scan Face Again
+                        </button>
+                    </div>
+
                     <div x-show="matchedPhotos.length > 0" x-cloak
                         class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                        <!-- Scan Again Button -->
-                        <div class="mb-4 flex justify-center">
-                                <button @click="openCamera()" data-force-consent
-                                class="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium shadow hover:from-blue-700 hover:to-indigo-700 inline-flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                Scan Face Again
-                            </button>
-                        </div>
-
                         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                             <template x-for="photo in matchedPhotos" :key="photo.id">
                                 <div
@@ -147,28 +147,13 @@
                             </template>
                         </div>
 
-                        <div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="mt-4 flex items-center justify-start gap-3">
                             <div class="inline-flex items-center gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 w-full sm:w-auto">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
                                 <span class="text-sm font-medium text-slate-700"
                                     x-text="`${matchedPhotos.length} ${matchedPhotos.length === 1 ? 'photo' : 'photos'} found`"></span>
-                            </div>
-
-                            <div  x-data="{ isDesktop: isDesktopDevice() }" x-show="isDesktop && matchedPhotos.length > 0" x-cloak class="w-full sm:w-auto">
-                                <button @click="downloadAllPhotos()"
-                                    class="w-full sm:w-auto px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium shadow hover:from-purple-700 hover:to-indigo-700 inline-flex items-center justify-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
-                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5" />
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M7.5 12 12 16.5 16.5 12" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V3" />
-                                    </svg>
-                                    Download all photos
-                                </button>
                             </div>
                         </div>
 
@@ -189,9 +174,28 @@
                         </div>
                     </div>
 
-                    <div x-show="matchedPhotos.length > 0" x-cloak class="mt-3 flex justify-start">
+                    <!-- Download all + WhatsApp buttons below grid card -->
+                    <div x-show="matchedPhotos.length > 0" x-cloak
+                        class="mt-3 flex flex-col sm:flex-row gap-3 justify-start w-full">
+                        <div x-data="{ isDesktop: isDesktopDevice() }"
+                            x-show="isDesktop && matchedPhotos.length > 0" x-cloak
+                            class="w-full sm:w-auto">
+                            <button @click="downloadAllPhotos()"
+                                class="w-full sm:w-auto px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium shadow hover:from-purple-700 hover:to-indigo-700 inline-flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5" />
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M7.5 12 12 16.5 16.5 12" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V3" />
+                                </svg>
+                                Download all photos
+                            </button>
+                        </div>
+
                         <button type="button" @click="shareOnWhatsApp()"
-                            class="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white px-5 py-2 text-sm font-medium shadow hover:from-green-600 hover:to-emerald-600">
+                            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white px-5 py-2 text-sm font-medium shadow hover:from-green-600 hover:to-emerald-600">
                             <svg class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                                 <path fill="currentColor" d="M16.75,13.96C17,14.09 17.16,14.16 17.21,14.26C17.27,14.37 17.25,14.87 17,15.44C16.8,16 15.76,16.54 15.3,16.56C14.84,16.58 14.83,16.92 12.34,15.83C9.85,14.74 8.35,12.08 8.23,11.91C8.11,11.74 7.27,10.53 7.31,9.3C7.36,8.08 8,7.5 8.26,7.26C8.5,7 8.77,6.97 8.94,7H9.41C9.56,7 9.77,6.94 9.96,7.45L10.65,9.32C10.71,9.45 10.75,9.6 10.66,9.76L10.39,10.17L10,10.59C9.88,10.71 9.74,10.84 9.88,11.09C10,11.35 10.5,12.18 11.2,12.87C12.11,13.75 12.91,14.04 13.15,14.17C13.39,14.31 13.54,14.29 13.69,14.13L14.5,13.19C14.69,12.94 14.85,13 15.08,13.08L16.75,13.96M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C10.03,22 8.2,21.43 6.65,20.45L2,22L3.55,17.35C2.57,15.8 2,13.97 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12C4,13.72 4.54,15.31 5.46,16.61L4.5,19.5L7.39,18.54C8.69,19.46 10.28,20 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" />
                             </svg>
