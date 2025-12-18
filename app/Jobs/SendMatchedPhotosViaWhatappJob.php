@@ -66,8 +66,8 @@ class SendMatchedPhotosViaWhatappJob implements ShouldQueue
                     );
                 }
 
-                // API throtetting delay of 2 seconds
-                sleep(2);
+                // API throtetting delay of 0.5 seconds
+                usleep(5000);
             }
         } catch (\Exception $e) {
             Log::error("Error in SendMatchedPhotosViaWhatappJob: " . $e->getMessage());

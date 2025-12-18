@@ -381,6 +381,47 @@ class publicLinkController extends Controller
         }
     }
 
+    public function checkWhatsappRequest(string $uuid, Request $request)
+    {
+        $event = Event::query()->where('uuid', $uuid)->firstOrFail(['id', 'uuid']);
+
+        $sessionToken = $request->cookie('otp_session_token');
+
+        if (!$sessionToken) {
+            return response()->json([
+                'allowed' => false,
+                'message' => 'Session not verified.',
+            ], 403);
+        }
+
+        $attempt = OtpVerificationAttempt::query()
+            ->where('event_id', $event->id)
+            ->where('session_token', $sessionToken)
+            ->first();
+
+        if (!$attempt) {
+            return response()->json([
+                'allowed' => false,
+                'message' => 'Session not verified.',
+            ], 403);
+        }
+
+        if ($attempt->last_whatsapp_photos_request_at) {
+            $minutes = now()->diffInMinutes($attempt->last_whatsapp_photos_request_at);
+
+            if ($minutes < 60) {
+                return response()->json([
+                    'allowed' => false,
+                    'message' => 'You recently requested photos on WhatsApp. You can retry after one hour. Please try again later.',
+                ], 429);
+            }
+        }
+
+        return response()->json([
+            'allowed' => true,
+        ]);
+    }
+
     public function verifyWebhook(Request $request)
     {
         try {
@@ -424,13 +465,18 @@ class publicLinkController extends Controller
 
             $message = $messages[0];
             $phoneNumber = $contacts[0]['wa_id'] ?? null;
-            $userMessage = strtolower(trim($message['text']['body'] ?? ''));
+            $userMessage = trim($message['text']['body'] ?? '');
 
-            if (preg_match('/^SEND\s+\d{6}$/', $userMessage)) {
+            if (preg_match('/^[A-Za-z0-9]{15}$/', $userMessage)) {
                 logger('Valid message request for photos: ' . $userMessage);
 
+                if($userMessage !== env('WHATSAPP_CODE_FOR_REQUEST_PHOTOS')){
+                    logger('Invalid code received: ' . $userMessage);
+                    return response()->json(['status' => 'invalid_webhook_code'], 200);
+                }
+
                 $getUserSessionFromPhoneNumber = OtpVerificationAttempt::query()
-                    ->where('phone_number', $phoneNumber)
+                    ->where('phone_number', '+'.$phoneNumber)
                     ->where('matched_found_photos', '>', 0)
                     ->first();
 
@@ -443,19 +489,20 @@ class publicLinkController extends Controller
 
                         foreach (array_chunk($photoIds, 10) as $chunk) {
                             $jobs[] = new SendMatchedPhotosViaWhatappJob(
-                                $getUserSessionFromPhoneNumber->phone_number,
+                                ltrim($getUserSessionFromPhoneNumber->phone_number, '+'),
                                 $chunk
                             );
                         }
 
-                        if(!empty($jobs)){
-                            // Dispatch jobs in batch
-                            Bus::batch($jobs)
-                                ->name('Send matched photos via WhatsApp')
-                                ->dispatch();
+                        Bus::batch($jobs)
+                            ->name('Send matched photos via WhatsApp')
+                            ->dispatch();
 
-                            logger('Dispatched WhatsApp jobs for phone number: ' . $phoneNumber);
-                        }
+                        logger('Dispatched WhatsApp jobs for phone number: ' . $phoneNumber);
+
+                        // Save the timestamp of the last request
+                        $getUserSessionFromPhoneNumber->last_whatsapp_photos_request_at = now();
+                        $getUserSessionFromPhoneNumber->save();
                     }
                 } else {
                     logger('No matched photos found for phone number: ' . $phoneNumber);

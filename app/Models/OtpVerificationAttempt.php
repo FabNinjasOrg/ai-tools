@@ -22,6 +22,7 @@ class OtpVerificationAttempt extends Model
         'session_token',
         'matched_photo_id_json',
         'zip_s3_url',
+        'last_whatsapp_photos_request_at',
     ];
 
     public function album(): BelongsTo

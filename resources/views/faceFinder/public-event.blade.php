@@ -825,11 +825,34 @@
                         return;
                     }
 
-                    const phoneNumber = '919429533400';
-                    const message = 'SEND 654321';
-                    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+                    const checkUrl = `{{ route('face_finder.public.whatsapp_request_check', ['uuid' => $uuid]) }}`;
 
-                    window.open(whatsappUrl, '_blank');
+                    fetch(checkUrl, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        credentials: 'include',
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.allowed) {
+                            this.setError(data.message || 'Cannot make request now.');
+                            return;
+                        }
+
+                        const phoneNumber = '919429533400';
+                        const code = @json(env('WHATSAPP_CODE_FOR_REQUEST_PHOTOS'));
+                        const message =
+                            `Please send the following message as it is to request your photos:\n` +
+                            `code: ${code}`;
+                        const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+
+                        window.open(whatsappUrl, '_blank');
+                    })
+                    .catch(() => {
+                        this.setError('Cannot make request now.');
+                    });
                 },
 
                 // Message helpers
