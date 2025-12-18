@@ -6,6 +6,7 @@ use App\Jobs\PrepareMatchedPhotosZip;
 use App\Models\Event;
 use App\Models\OtpVerificationAttempt;
 use App\Models\Photo;
+use Exception;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -377,4 +378,58 @@ class publicLinkController extends Controller
             return response()->json(['error' => 'Failed to start ZIP preparation'], 500);
         }
     }
+
+    public function verifyWebhook(Request $request)
+    {
+        try {
+            logger('whatapp related log');
+
+            // Retrieve the verification token from the .env file
+            $verify_token = 'abc123';
+
+            // Get verification parameters from the query string
+            $mode = $request->query('hub_mode');
+            $token = $request->query('hub_verify_token');
+            $challenge = $request->query('hub_challenge');
+
+            // If the mode is 'subscribe' and the token matches, return the challenge token
+            if ($mode === 'subscribe' && $token === $verify_token) {
+                return response($challenge, 200);
+            }
+
+            // If verification fails, return 403 Forbidden
+            return response('Forbidden', 403);
+        } catch (Exception $e) {
+            return $e->getMessage();
+        }
+    }
+
+    public function webhook(Request $request)
+    {
+        try {
+            logger('webhook called');
+
+            $data = $request->all();
+
+            logger('webhook data: ' . json_encode($data));
+
+            $messages = $data['entry'][0]['changes'][0]['value']['messages'] ?? [];
+            $contacts = $data['entry'][0]['changes'][0]['value']['contacts'] ?? [];
+
+            if (empty($messages) || empty($contacts)) {
+                return response()->json(['status' => 'ignored'], 200);
+            }
+
+            $message = $messages[0];
+            $phoneNumber = $contacts[0]['wa_id'] ?? null;
+            $userMessage = strtolower(trim($message['text']['body'] ?? ''));
+            
+            logger('usermessage ' . $userMessage);
+
+            return response()->json(['status' => 'fallback'], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => 'Webhook error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
 }
