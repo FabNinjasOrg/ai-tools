@@ -223,9 +223,9 @@ class EventController extends Controller
     public function generatePublic(string $uuid)
     {
         $event = Event::query()->where('uuid', $uuid)->firstOrFail();
-        if ($event->public_url) {
-            return response()->json(['public_url' => $event->public_url]);
-        }
+        // if ($event->public_url) {
+        //     return response()->json(['public_url' => $event->public_url]);
+        // }
 
         // Generate URL /event/{name}/{uuid}
         $slugName = Str::slug($event->name);
