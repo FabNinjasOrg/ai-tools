@@ -426,9 +426,7 @@ class publicLinkController extends Controller
         }
 
         if ($attempt->last_whatsapp_photos_request_at) {
-            $minutes = now()->diffInMinutes($attempt->last_whatsapp_photos_request_at);
-
-            if ($minutes < 60) {
+            if ($attempt->last_whatsapp_photos_request_at->gt(now()->subHour())) {
                 return response()->json([
                     'allowed' => false,
                     'message' => 'You recently requested photos on WhatsApp. You can retry after one hour. Please try again later.',
