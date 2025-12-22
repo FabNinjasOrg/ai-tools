@@ -16,9 +16,9 @@
         </div>
     @else
         <div x-data="eventPage('{{ $uuid }}')" x-init="init()" x-cloak class="max-w-7xl mx-auto px-6 py-12">
-            <div class="mb-4">
+            <div class="mb-6">
                 <template x-if="successMessage">
-                    <div class="w-full">
+                    <div class="w-full mb-3">
                         <div
                             class="rounded-xl border border-green-200 border-l-4 border-l-green-500 bg-green-50 px-4 py-3 text-sm shadow-sm text-green-800">
                             <div class="flex items-start gap-3">
@@ -32,7 +32,7 @@
                     </div>
                 </template>
                 <template x-if="errorMessage">
-                    <div class="w-full">
+                    <div class="w-full mb-3">
                         <div
                             class="rounded-xl border border-red-200 border-l-4 border-l-red-500 bg-red-50 px-4 py-3 text-sm shadow-sm text-red-800">
                             <div class="flex items-start gap-3">
@@ -46,7 +46,7 @@
                     </div>
                 </template>
                 <template x-if="infoMessage">
-                    <div class="w-full">
+                    <div class="w-full mb-3">
                         <div
                             class="rounded-xl border border-slate-200 border-l-4 border-l-slate-400 bg-slate-50 px-4 py-3 text-sm shadow-sm text-slate-800">
                             <div class="flex items-start gap-3">
@@ -61,14 +61,45 @@
                 </template>
             </div>
 
-            <div class="mb-6">
-                <h1
-                    class="text-3xl md:text-5xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                    {{ $eventName }}</h1>
-                <div class="mt-2 text-[13px] text-slate-600 inline-flex items-center gap-2 mb-6">
-                    <span
-                        class="h-5 w-5 rounded-full bg-emerald-100 text-emerald-700 inline-flex items-center justify-center font-semibold">i</span>
-                    <span>Images will show only when the match is 40% or higher.</span>
+            <!-- Event Header Card -->
+            <div class="mb-8 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <div class="px-6 py-5 md:px-8 md:py-6">
+                    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                        <!-- Event Name and Info -->
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="flex-shrink-0 pt-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 md:h-8 md:w-8 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1 flex items-baseline gap-3 flex-wrap">
+                                    <h2 class="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent leading-none">
+                                        {{ $eventName }}
+                                    </h2>
+                                </div>
+                            </div>
+                            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-100">
+                                <span class="h-4 w-4 rounded-full bg-emerald-100 text-emerald-700 inline-flex items-center justify-center font-semibold text-xs">i</span>
+                                <span class="text-sm text-slate-700 font-medium">Images will show only when the match is 40% or higher.</span>
+                            </div>
+                        </div>
+
+                        <!-- Logout Button -->
+                        <div x-show="hasActiveSession" x-cloak class="flex-shrink-0">
+                            <form method="POST" action="{{ route('face_finder.public.logout') }}" class="inline">
+                                @csrf
+                                <input type="hidden" name="uuid" value="{{ $uuid }}">
+                                <button type="submit"
+                                    class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-xl shadow-sm hover:shadow-md transition-all">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                    </svg>
+                                    Logout
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div x-cloak class="mb-8 relative rounded-2xl min-h-[60vh] md:min-h-[50vh] lg:min-h-[60vh]">
@@ -279,7 +310,7 @@
                 class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
                 <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-slate-900">Verify Phone Number</h3>
+                        <h3 class="text-lg font-semibold text-slate-900">Enter Phone Number</h3>
                         <button @click="closePhoneModal()" class="text-slate-400 hover:text-slate-600">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                                 stroke="currentColor" stroke-width="2">
@@ -289,7 +320,8 @@
                     </div>
 
                     <!-- Phone Number Input Step -->
-                    <div x-show="!showOTPInput" class="space-y-4">
+                    {{-- <div x-show="!showOTPInput" class="space-y-4"> --}}
+                    <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2">Phone Number</label>
                             <div class="flex">
@@ -304,13 +336,14 @@
                             </div>
                             <p class="text-xs text-slate-500 mt-1">Enter your 10-digit Indian phone number. </p>
                             <div x-show="otpErrorMessage" x-cloak class="text-red-500 text-xs mt-1" x-text="otpErrorMessage"></div>
-                            <div x-show="otpSuccessMessage" x-cloak class="text-green-500 text-xs mt-1" x-text="otpSuccessMessage"></div>
+                            {{-- <div x-show="otpSuccessMessage" x-cloak class="text-green-500 text-xs mt-1" x-text="otpSuccessMessage"></div> --}}
                         </div>
 
                         <div class="flex gap-3">
                             <button @click="closePhoneModal()"
                                 class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">Cancel</button>
-                            <button @click="sendOTP()" :disabled="!phoneNumber || isSendingOTP || otpErrorMessage !== ''"
+                            {{-- Original OTP flow button --}}
+                            {{-- <button @click="sendOTP()" :disabled="!phoneNumber || isSendingOTP || otpErrorMessage !== ''"
                                 class="flex-1 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2">
                                 <svg x-show="isSendingOTP" class="h-4 w-4 animate-spin" viewBox="0 0 24 24"
                                     fill="none" stroke="currentColor" stroke-width="2">
@@ -318,12 +351,22 @@
                                     <path d="M4 12a8 8 0 018-8" class="opacity-75" />
                                 </svg>
                                 <span x-text="isSendingOTP ? 'Sending...' : 'Send OTP'"></span>
+                            </button> --}}
+                            <button @click="submitPhoneNumber()" :disabled="!phoneNumber || isSendingOTP || otpErrorMessage !== ''"
+                                class="flex-1 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2">
+                                <svg x-show="isSendingOTP" class="h-4 w-4 animate-spin" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" class="opacity-25" />
+                                    <path d="M4 12a8 8 0 018-8" class="opacity-75" />
+                                </svg>
+                                <span x-text="isSendingOTP ? 'Submitting...' : 'Submit'"></span>
                             </button>
                         </div>
                     </div>
+                    {{-- </div> --}}
 
-                    <!-- OTP Input Step -->
-                    <div x-show="showOTPInput" class="space-y-4">
+                    {{-- OTP Input Step (commented out - can be enabled in future) --}}
+                    {{-- <div x-show="showOTPInput" class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2">Enter OTP</label>
                             <input x-model="otpCode" type="text" placeholder="123456" maxlength="6"
@@ -348,7 +391,7 @@
                                 <span x-text="isVerifyingOTP ? 'Verifying...' : 'Verify'"></span>
                             </button>
                         </div>
-                    </div>
+                    </div> --}}
                 </div>
             </div>
 
@@ -387,6 +430,21 @@
                     </div>
                 </div>
             </div>
+
+            <template x-if="isMatchingLoader">
+                <div class="fixed inset-0 z-[9999] backdrop-blur-lg flex items-center justify-center">
+                    <div class="text-center bg-white/95 rounded-2xl px-8 py-6 shadow-2xl border border-white/20">
+                        <div class="inline-flex items-center justify-center mb-4">
+                            <svg class="animate-spin h-12 w-12 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+                        <p class="text-lg font-medium text-slate-700">Matching your photo...</p>
+                        <p class="text-sm text-slate-500 mt-2">Please wait while we find your photos</p>
+                    </div>
+                </div>
+            </template>
         </div>
     @endif
 @endsection
@@ -401,17 +459,18 @@
                 showUnlockStep: false,
                 showCamera: false,
                 showPhoneModal: false,
-                showOTPInput: false,
+                // showOTPInput: false, // Commented out - OTP flow disabled
                 phoneNumber: '',
-                otpCode: '',
-                isVerifyingOTP: false,
+                // otpCode: '', // Commented out - OTP flow disabled
+                // isVerifyingOTP: false, // Commented out - OTP flow disabled
                 isSendingOTP: false,
                 otpErrorMessage: '',
-                otpSuccessMessage: '',
+                // otpSuccessMessage: '', // Commented out - OTP flow disabled
                 stream: null,
                 matchedPhotos: [],
                 showNoMatches: false,
                 isProcessing: false,
+                isMatchingLoader: false,
                 successMessage: '',
                 errorMessage: '',
                 infoMessage: '',
@@ -421,6 +480,7 @@
                 matchedPhotosPage: 1,
                 matchedPhotosHasMore: false,
                 matchedPhotosLoading: false,
+                hasActiveSession: false,
 
                 init() {
                     if (!this.hasCheckedOtp) {
@@ -446,15 +506,21 @@
                             const data = await response.json();
                             if (data.verified) {
                                 this.showUnlockStep = true;
+                                this.hasActiveSession = true;
 
                                 // Set matched photos from backend - await it to prevent flicker
                                 await this.loadMatchedPhotos();
+                            } else {
+                                this.hasActiveSession = false;
                             }
 
                             return data.verified;
+                        } else {
+                            this.hasActiveSession = false;
                         }
                     } catch (e) {
                         console.warn('Failed to check OTP verification');
+                        this.hasActiveSession = false;
                     }
                 },
 
@@ -547,18 +613,19 @@
 
                 openPhoneModal() {
                     this.showPhoneModal = true;
-                    this.showOTPInput = false; // start with phone input first
-                    this.otpCode = '';
+                    // this.showOTPInput = false; // Commented out - OTP flow disabled
+                    // this.otpCode = ''; // Commented out - OTP flow disabled
                 },
 
                 closePhoneModal() {
                     this.showPhoneModal = false;
-                    this.showOTPInput = false;
-                    this.otpCode = '';
+                    // this.showOTPInput = false; // Commented out - OTP flow disabled
+                    // this.otpCode = ''; // Commented out - OTP flow disabled
                     this.clearOtpMessages();
                 },
 
-                async sendOTP() {
+                // Direct submit without OTP
+                async submitPhoneNumber() {
                     // Clear previous messages
                     this.clearOtpMessages();
 
@@ -570,63 +637,94 @@
 
                     this.isSendingOTP = true;
                     try {
-                        // Optionally call backend to send OTP here
-                        // For now, simulate a short delay and success
-                        await new Promise(r => setTimeout(r, 600));
-                        this.otpSuccessMessage = 'OTP sent successfully. Please check your phone.';
-                        this.otpErrorMessage = '';
+                        // Log phone number attempt
+                        await this.logOtpAttempt('+91' + this.phoneNumber);
 
-                        // Move to OTP input step
-                        this.showOTPInput = true;
+                        // Set session as active (cookie is set by backend)
+                        this.hasActiveSession = true;
+
+                        // Close modal and show camera directly
+                        this.closePhoneModal();
+                        this.showUnlockStep = true;
+                        this.openCamera();
                     } catch (e) {
-                        console.error('Failed to send OTP', e);
-                        this.otpErrorMessage = 'Failed to send OTP. Please try again.';
-                        this.otpSuccessMessage = '';
+                        console.error('Failed to submit phone number', e);
+                        this.otpErrorMessage = 'Failed to submit. Please try again.';
                     } finally {
                         this.isSendingOTP = false;
                     }
                 },
 
-                async verifyOTP() {
-                    if (!this.otpCode || this.otpCode.length !== 6) {
-                        this.otpErrorMessage = 'Please enter a valid 6-digit OTP';
-                        this.otpSuccessMessage = '';
-                        return;
-                    }
-
-                    this.isVerifyingOTP = true;
-                    this.clearOtpMessages();
-
-                    try {
-                        // Static OTP check
-                        if (this.otpCode !== '123456') {
-                            throw new Error('invalid_static_otp');
-                        }
-
-                        this.otpSuccessMessage = 'OTP verified successfully!';
-                        this.otpErrorMessage = '';
-
-                        this.logOtpAttempt('+91' + this.phoneNumber);
-
-                        // Close modal and show camera
-                        this.closePhoneModal();
-                        this.showUnlockStep = true;
-                        this.openCamera();
-
-                    } catch (error) {
-                        console.error('Error verifying OTP:', error);
-                        this.otpErrorMessage = 'Invalid OTP. Please check and try again.';
-                        this.otpSuccessMessage = '';
-                    } finally {
-                        this.isVerifyingOTP = false;
-                    }
-                },
-
-                backToPhoneInput() {
-                    this.showOTPInput = false;
-                    this.otpCode = '';
-                    this.clearOtpMessages();
-                },
+                // Original OTP flow functions (commented out - can be enabled in future)
+                // async sendOTP() {
+                //     // Clear previous messages
+                //     this.clearOtpMessages();
+                //
+                //     // Check phone validation
+                //     if (!this.phoneNumber || this.otpErrorMessage) {
+                //         this.otpErrorMessage = this.otpErrorMessage || 'Please enter a valid phone number.';
+                //         return;
+                //     }
+                //
+                //     this.isSendingOTP = true;
+                //     try {
+                //         // Optionally call backend to send OTP here
+                //         // For now, simulate a short delay and success
+                //         await new Promise(r => setTimeout(r, 600));
+                //         this.otpSuccessMessage = 'OTP sent successfully. Please check your phone.';
+                //         this.otpErrorMessage = '';
+                //
+                //         // Move to OTP input step
+                //         this.showOTPInput = true;
+                //     } catch (e) {
+                //         console.error('Failed to send OTP', e);
+                //         this.otpErrorMessage = 'Failed to send OTP. Please try again.';
+                //         this.otpSuccessMessage = '';
+                //     } finally {
+                //         this.isSendingOTP = false;
+                //     }
+                // },
+                //
+                // async verifyOTP() {
+                //     if (!this.otpCode || this.otpCode.length !== 6) {
+                //         this.otpErrorMessage = 'Please enter a valid 6-digit OTP';
+                //         this.otpSuccessMessage = '';
+                //         return;
+                //     }
+                //
+                //     this.isVerifyingOTP = true;
+                //     this.clearOtpMessages();
+                //
+                //     try {
+                //         // Static OTP check
+                //         if (this.otpCode !== '123456') {
+                //             throw new Error('invalid_static_otp');
+                //         }
+                //
+                //         this.otpSuccessMessage = 'OTP verified successfully!';
+                //         this.otpErrorMessage = '';
+                //
+                //         this.logOtpAttempt('+91' + this.phoneNumber);
+                //
+                //         // Close modal and show camera
+                //         this.closePhoneModal();
+                //         this.showUnlockStep = true;
+                //         this.openCamera();
+                //
+                //     } catch (error) {
+                //         console.error('Error verifying OTP:', error);
+                //         this.otpErrorMessage = 'Invalid OTP. Please check and try again.';
+                //         this.otpSuccessMessage = '';
+                //     } finally {
+                //         this.isVerifyingOTP = false;
+                //     }
+                // },
+                //
+                // backToPhoneInput() {
+                //     this.showOTPInput = false;
+                //     this.otpCode = '';
+                //     this.clearOtpMessages();
+                // },
 
                 validatePhoneNumber() {
                     this.otpErrorMessage = '';
@@ -709,7 +807,11 @@
                     this.matchedPhotosHasMore = false;
                     this.showNoMatches = false;
                     this.clearMessages();
-                    this.setInfo('Processing your photo…');
+
+                    // Show full-page loader
+                    this.isMatchingLoader = true;
+                    // Small delay to ensure DOM updates
+                    await new Promise(resolve => setTimeout(resolve, 10));
 
                     try {
                         const formData = new FormData();
@@ -748,10 +850,7 @@
                         this.setError('Error processing photo. Please try again.');
                     } finally {
                         this.isProcessing = false;
-                        // Clear "processing" info once finished
-                        if (this.infoMessage && this.infoMessage.startsWith('Processing')) {
-                            this.infoMessage = '';
-                        }
+                        this.isMatchingLoader = false;
                     }
                 },
 
@@ -867,7 +966,7 @@
                 },
                 clearOtpMessages() {
                     this.otpErrorMessage = '';
-                    this.otpSuccessMessage = '';
+                    // this.otpSuccessMessage = ''; // Commented out - OTP flow disabled
                 },
                 setSuccess(msg) {
                     this.successMessage = msg;

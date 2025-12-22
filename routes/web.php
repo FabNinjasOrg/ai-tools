@@ -109,6 +109,7 @@ Route::prefix('face-finder/public')->group(function () {
     Route::post('{uuid}/otp-verified', [publicLinkController::class, 'checkOtpSession'])->name('face_finder.public.otp_verified');
     Route::post('{uuid}/download-matched-photos-zip', [publicLinkController::class, 'downloadMatchedPhotosZip'])->name('face_finder.public.download_matched_photos_zip');
     Route::get('{uuid}/whatsapp-request-check', [publicLinkController::class, 'checkWhatsappRequest'])->name('face_finder.public.whatsapp_request_check');
+    Route::post('logout', [publicLinkController::class, 'logout'])->name('face_finder.public.logout');
     Route::get('{name}/{uuid}', [publicLinkController::class, 'publicEventPage'])->name('face_finder.public.show');
 
     // Guest consent route

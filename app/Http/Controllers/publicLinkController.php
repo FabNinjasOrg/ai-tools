@@ -381,6 +381,25 @@ class publicLinkController extends Controller
         }
     }
 
+    public function logout(Request $request)
+    {
+        $sessionToken = $request->cookie('otp_session_token');
+
+        if ($sessionToken) {
+            OtpVerificationAttempt::where('session_token', $sessionToken)
+                ->update(['session_token' => null]);
+        }
+
+        // Get UUID from request to redirect back
+        $uuid = $request->input('uuid');
+        $event = Event::query()->where('uuid', $uuid)->first(['name']);
+        $eventName = $event->name ?? '';
+
+        // Clear cookie and redirect
+        return redirect()->route('face_finder.public.show', ['name' => $eventName, 'uuid' => $uuid])
+            ->cookie('otp_session_token', '', -1, '/', null, false, true);
+    }
+
     public function checkWhatsappRequest(string $uuid, Request $request)
     {
         $event = Event::query()->where('uuid', $uuid)->firstOrFail(['id', 'uuid']);
