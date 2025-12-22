@@ -7,6 +7,7 @@ use App\Jobs\SendMatchedPhotosViaWhatappJob;
 use App\Models\Event;
 use App\Models\OtpVerificationAttempt;
 use App\Models\Photo;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
@@ -426,7 +427,7 @@ class publicLinkController extends Controller
         }
 
         if ($attempt->last_whatsapp_photos_request_at) {
-            if ($attempt->last_whatsapp_photos_request_at->gt(now()->subHour())) {
+            if (Carbon::parse($attempt->last_whatsapp_photos_request_at)->gt(now()->subHour())) {
                 return response()->json([
                     'allowed' => false,
                     'message' => 'You recently requested photos on WhatsApp. You can retry after one hour. Please try again later.',
@@ -499,9 +500,32 @@ class publicLinkController extends Controller
                     ->first();
 
                 if ($getUserSessionFromPhoneNumber->last_whatsapp_photos_request_at) {
-                    $minutes = now()->diffInMinutes($getUserSessionFromPhoneNumber->last_whatsapp_photos_request_at);
+                    $lastRequest = Carbon::parse(
+                        $getUserSessionFromPhoneNumber->last_whatsapp_photos_request_at
+                    );
 
-                    if ($minutes < 60) {
+                    if ($lastRequest->gt(now()->subHour())) {
+                        $response = Http::withToken(env('WHATSAPP_TOKEN'))
+                            ->post('https://graph.facebook.com/v22.0/' . env('WHATSAPP_PHONE_NUMBER_ID') . '/messages',
+                                [
+                                    'messaging_product' => 'whatsapp',
+                                    'to' =>  ltrim($getUserSessionFromPhoneNumber->phone_number, '+'),
+                                    'type' => 'text',
+                                    'text' => [
+                                        'body' => 'You recently requested photos on WhatsApp. You can retry after one hour. Please try again later.',
+                                    ],
+                                ]
+                            );
+
+                        if ($response->failed()) {
+                            Log::error(
+                                "Failed to send WhatsApp document due to request time limit",
+                                [
+                                    'response' => $response->body(),
+                                ]
+                            );
+                        }
+
                         return response()->json(['status' => 'fallback'], 200);
                     }
                 }

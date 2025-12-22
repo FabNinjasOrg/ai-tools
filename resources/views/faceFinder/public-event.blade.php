@@ -970,18 +970,29 @@
                 },
                 setSuccess(msg) {
                     this.successMessage = msg;
+                    this.scrollToTopForMessage();
                     setTimeout(() => {
                         if (this.successMessage === msg) this.successMessage = '';
                     }, 4000);
                 },
                 setError(msg) {
                     this.errorMessage = msg;
+                    this.scrollToTopForMessage();
                 },
                 setInfo(msg) {
                     this.infoMessage = msg;
+                    this.scrollToTopForMessage();
                     setTimeout(() => {
                         if (this.infoMessage === msg) this.infoMessage = '';
                     }, 10000);
+                },
+                scrollToTopForMessage() {
+                    this.$nextTick(() => {
+                        window.scrollTo({
+                            top: 0,
+                            behavior: 'smooth'
+                        });
+                    });
                 },
 
             };
