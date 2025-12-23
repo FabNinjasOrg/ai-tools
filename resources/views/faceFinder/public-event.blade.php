@@ -61,9 +61,25 @@
                 </template>
             </div>
 
+            <div x-show="hasActiveSession" x-cloak class="relative mb-2">
+                <div class="flex justify-end">
+                    <form method="POST" action="{{ route('face_finder.public.logout') }}" class="inline">
+                        @csrf
+                        <input type="hidden" name="uuid" value="{{ $uuid }}">
+                        <button type="submit"
+                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 rounded-xl shadow-md hover:shadow-lg transition-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                            End Session
+                        </button>
+                    </form>
+                </div>
+            </div>
+
             <!-- Event Header Card -->
             <div class="mb-8 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                <div class="px-6 py-5 md:px-8 md:py-6">
+                <div class="px-4 py-5 md:px-8 md:py-6">
                     <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                         <!-- Event Name and Info -->
                         <div class="flex-1">
@@ -83,21 +99,6 @@
                                 <span class="h-4 w-4 rounded-full bg-emerald-100 text-emerald-700 inline-flex items-center justify-center font-semibold text-xs">i</span>
                                 <span class="text-sm text-slate-700 font-medium">Images will show only when the match is 40% or higher.</span>
                             </div>
-                        </div>
-
-                        <!-- Logout Button -->
-                        <div x-show="hasActiveSession" x-cloak class="flex-shrink-0">
-                            <form method="POST" action="{{ route('face_finder.public.logout') }}" class="inline">
-                                @csrf
-                                <input type="hidden" name="uuid" value="{{ $uuid }}">
-                                <button type="submit"
-                                    class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-xl shadow-sm hover:shadow-md transition-all">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                    </svg>
-                                    Logout
-                                </button>
-                            </form>
                         </div>
                     </div>
                 </div>
@@ -205,33 +206,32 @@
                         </div>
                     </div>
 
-                    <!-- Download all + WhatsApp buttons below grid card -->
-                    <div x-show="matchedPhotos.length > 0" x-cloak
-                        class="mt-3 flex flex-col sm:flex-row gap-3 justify-start w-full">
-                        <div x-data="{ isDesktop: isDesktopDevice() }"
-                            x-show="isDesktop && matchedPhotos.length > 0" x-cloak
-                            class="w-full sm:w-auto">
-                            <button @click="downloadAllPhotos()"
-                                class="w-full sm:w-auto px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium shadow hover:from-purple-700 hover:to-indigo-700 inline-flex items-center justify-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5" />
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M7.5 12 12 16.5 16.5 12" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V3" />
+                    <div x-show="matchedPhotos.length > 0" x-cloak class="mt-6 flex justify-center w-full">
+                        <div class="inline-flex flex-col sm:flex-row items-center gap-4 px-6 py-4 rounded-xl border-2 border-slate-200 bg-gradient-to-br from-white to-slate-50/50 shadow-md">
+                            <div x-data="{ isDesktop: isDesktopDevice() }"
+                                x-show="isDesktop && matchedPhotos.length > 0" x-cloak>
+                                <button @click="downloadAllPhotos()"
+                                    class="px-5 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium shadow-md hover:shadow-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 inline-flex items-center justify-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5" />
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M7.5 12 12 16.5 16.5 12" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V3" />
+                                    </svg>
+                                    <span>Download All Photos</span>
+                                </button>
+                            </div>
+
+                            <button type="button" @click="shareOnWhatsApp()"
+                                class="px-5 py-2.5 inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm font-medium shadow-md hover:shadow-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-200">
+                                <svg class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path fill="currentColor" d="M16.75,13.96C17,14.09 17.16,14.16 17.21,14.26C17.27,14.37 17.25,14.87 17,15.44C16.8,16 15.76,16.54 15.3,16.56C14.84,16.58 14.83,16.92 12.34,15.83C9.85,14.74 8.35,12.08 8.23,11.91C8.11,11.74 7.27,10.53 7.31,9.3C7.36,8.08 8,7.5 8.26,7.26C8.5,7 8.77,6.97 8.94,7H9.41C9.56,7 9.77,6.94 9.96,7.45L10.65,9.32C10.71,9.45 10.75,9.6 10.66,9.76L10.39,10.17L10,10.59C9.88,10.71 9.74,10.84 9.88,11.09C10,11.35 10.5,12.18 11.2,12.87C12.11,13.75 12.91,14.04 13.15,14.17C13.39,14.31 13.54,14.29 13.69,14.13L14.5,13.19C14.69,12.94 14.85,13 15.08,13.08L16.75,13.96M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C10.03,22 8.2,21.43 6.65,20.45L2,22L3.55,17.35C2.57,15.8 2,13.97 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12C4,13.72 4.54,15.31 5.46,16.61L4.5,19.5L7.39,18.54C8.69,19.46 10.28,20 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" />
                                 </svg>
-                                Download all photos
+                                <span>Get All Photos on WhatsApp</span>
                             </button>
                         </div>
-
-                        <button type="button" @click="shareOnWhatsApp()"
-                            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white px-5 py-2 text-sm font-medium shadow hover:from-green-600 hover:to-emerald-600">
-                            <svg class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-                                <path fill="currentColor" d="M16.75,13.96C17,14.09 17.16,14.16 17.21,14.26C17.27,14.37 17.25,14.87 17,15.44C16.8,16 15.76,16.54 15.3,16.56C14.84,16.58 14.83,16.92 12.34,15.83C9.85,14.74 8.35,12.08 8.23,11.91C8.11,11.74 7.27,10.53 7.31,9.3C7.36,8.08 8,7.5 8.26,7.26C8.5,7 8.77,6.97 8.94,7H9.41C9.56,7 9.77,6.94 9.96,7.45L10.65,9.32C10.71,9.45 10.75,9.6 10.66,9.76L10.39,10.17L10,10.59C9.88,10.71 9.74,10.84 9.88,11.09C10,11.35 10.5,12.18 11.2,12.87C12.11,13.75 12.91,14.04 13.15,14.17C13.39,14.31 13.54,14.29 13.69,14.13L14.5,13.19C14.69,12.94 14.85,13 15.08,13.08L16.75,13.96M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C10.03,22 8.2,21.43 6.65,20.45L2,22L3.55,17.35C2.57,15.8 2,13.97 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12C4,13.72 4.54,15.31 5.46,16.61L4.5,19.5L7.39,18.54C8.69,19.46 10.28,20 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" />
-                            </svg>
-                            <span>Get all photos on WhatsApp</span>
-                        </button>
                     </div>
 
                     <!-- Loading state while checking verification -->
