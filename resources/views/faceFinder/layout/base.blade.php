@@ -36,6 +36,7 @@
                         this.success = message;
                         this.error = '';
                         this.info = '';
+                        this.scrollToTopForMessage();
                         if (duration > 0) {
                             setTimeout(() => { this.success = ''; }, duration);
                         }
@@ -45,6 +46,7 @@
                         this.error = message;
                         this.success = '';
                         this.info = '';
+                        this.scrollToTopForMessage();
                         if (duration > 0) {
                             setTimeout(() => { this.error = ''; }, duration);
                         }
@@ -54,6 +56,7 @@
                         this.info = message;
                         this.success = '';
                         this.error = '';
+                        this.scrollToTopForMessage();
                         if (duration > 0) {
                             setTimeout(() => { this.info = ''; }, duration);
                         }
@@ -63,6 +66,25 @@
                         this.success = '';
                         this.error = '';
                         this.info = '';
+                    },
+
+                    scrollToTopForMessage() {
+                        try {
+                            const main = document.getElementById('app-main-scroll');
+                            if (main) {
+                                main.scrollTo({
+                                    top: 0,
+                                    behavior: 'smooth'
+                                });
+                            } else {
+                                window.scrollTo({
+                                    top: 0,
+                                    behavior: 'smooth'
+                                });
+                            }
+                        } catch (e) {
+                            window.scrollTo(0, 0);
+                        }
                     }
                 });
 

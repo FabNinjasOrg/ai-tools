@@ -164,7 +164,7 @@
             </header>
 
             <!-- Main Content -->
-            <main class="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+            <main id="app-main-scroll" class="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
                 <!-- Centralized Messages -->
                 <div class="px-6 lg:px-8 pt-6 lg:pt-8">
                     <!-- Success Message -->
