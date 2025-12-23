@@ -4,6 +4,7 @@
 
 @section('content')
     <div x-data="albumPage({{ $albumId }}, '{{ $eventUuid }}', '{{ $albumName }}')" x-init="init()" x-cloak class="max-w-7xl mx-auto px-6">
+        @include('faceFinder.components.loader-overlay')
         <div class="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
             <div class="flex items-center gap-3 text-lg md:text-lg">
                 <a href="{{ route('face_finder.events.index') }}"
@@ -161,7 +162,7 @@
 
                     <div x-cloak class="flex justify-center mt-6" x-show="hasMore">
                         <button @click="loadMore()"
-                            class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200"
+                            class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
                             :disabled="loading">
                             <span x-show="!loading">Load more</span>
                             <span x-show="loading">Loading…</span>
@@ -456,6 +457,7 @@
                 activeTab: '{{ request('tab', 'photos') }}',
                 pendingReload: false,
                 deletingPhotos: false,
+                isUploading: false,
 
                 async init() {
                     await this.loadMore();
@@ -505,6 +507,8 @@
                         return;
                     }
 
+                    this.isUploading = true;
+
                     if (uppyManager) {
                         uppyManager.closeModal();
                     }
@@ -552,6 +556,8 @@
                     } catch (error) {
                         this.$store.messages.showError(error.message || 'Failed to upload photos. Please try again.');
                         uppyManager.reset();
+                    } finally {
+                        this.isUploading = false;
                     }
                 },
 

@@ -26,11 +26,9 @@ class UppyUploadManager {
     }
 
     init(inline) {
-        console.log('uppy init');
-
         const restrictions = {
             maxFileSize: 1024 * 1024 * 1024, // 1 GB max per file
-            maxNumberOfFiles: null, // No limit on number of files
+            maxNumberOfFiles: 500,
             allowedFileTypes: [
                 '.zip',
                 'image/*'
@@ -60,6 +58,20 @@ class UppyUploadManager {
             trigger: inline ? null : null,
             closeModalOnClickOutside: !inline,
             closeAfterFinish: false
+        });
+
+        this.uppy.on('file-added', (file) => {
+            const totalSize = this.uppy
+                .getFiles()
+                .reduce((sum, f) => sum + (f.size || 0), 0);
+
+            if (totalSize > 1024 * 1024 * 1024) { // 1GB
+                this.uppy.removeFile(file.id);
+
+                this.onError?.(
+                    'Total upload size (photos + ZIPs) must not exceed 1 GB.'
+                );
+            }
         });
 
         if (this.onUpload) {

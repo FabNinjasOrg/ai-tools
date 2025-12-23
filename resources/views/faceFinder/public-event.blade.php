@@ -192,7 +192,7 @@
                         <!-- Load More Button -->
                         <div x-show="matchedPhotosHasMore" x-cloak class="flex justify-center mt-6">
                             <button @click="loadMoreMatchedPhotos()"
-                                class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
                                 :disabled="matchedPhotosLoading">
                                 <span x-show="!matchedPhotosLoading">Load more</span>
                                 <span x-show="matchedPhotosLoading" class="inline-flex items-center gap-2">

@@ -86,6 +86,7 @@
         @endif
 
         <div x-data="manageUploadPhotos()" x-cloak>
+            @include('faceFinder.components.loader-overlay')
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm">
                     <div class="p-5 border-b border-slate-200 flex items-center justify-between">
                         <div class="flex items-center gap-3">
@@ -194,6 +195,7 @@
                 selectedAlbumId: '',
                 loading: true,
                 uploading: false,
+                isUploading: false,
 
                 async init() {
                     const self = this;
@@ -284,6 +286,7 @@
 
                     this.$store.messages.clear();
                     this.uploading = true;
+                    this.isUploading = true;
 
                     try {
                         const form = new FormData();
@@ -352,6 +355,7 @@
                         this.$store.messages.showError(e.message || 'Something went wrong.');
                     } finally {
                         this.uploading = false;
+                        this.isUploading = false;
                     }
                 }
             }

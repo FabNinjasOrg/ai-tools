@@ -196,6 +196,7 @@
                             <p class="text-sm text-slate-600 mt-1">Select photos or ZIP files to upload</p>
                         </div>
                         <div class="p-6" x-data="manageUploader()" x-clock>
+                            @include('faceFinder.components.loader-overlay')
                                 <div x-ref="uppyContainer"></div>
                         </div>
                     </div>
@@ -241,6 +242,8 @@
             const eventUuid = '{{ $data['eventUuid'] }}';
 
             return {
+                isUploading: false,
+
                 async init(){
                     uppyManager = new window.UppyUploadManager({
                         container: this.$refs.uppyContainer,
@@ -259,6 +262,8 @@
                         showError('Please select at least one photo to upload.');
                         return;
                     }
+
+                    this.isUploading = true;
 
                     const formData = new FormData();
                     files.forEach((file) => {
@@ -308,6 +313,8 @@
                     } catch (error) {
                         showError(error.message || 'Failed to upload photos. Please try again.');
                         uppyManager.reset();
+                    } finally {
+                        this.isUploading = false;
                     }
                 },
             }
