@@ -446,7 +446,7 @@ class publicLinkController extends Controller
             logger('whatapp related log');
 
             // Retrieve the verification token from the .env file
-            $verify_token = 'abc123';
+            $verify_token = 'g#9G26MfyaG3C9hguh';
 
             // Get verification parameters from the query string
             $mode = $request->query('hub_mode');
