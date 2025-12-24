@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\UserSubscription;
 use App\Http\Controllers\UserConsentController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class GoogleAuthController extends Controller
 {
@@ -33,6 +34,7 @@ class GoogleAuthController extends Controller
                 if($user){
                     $user->update([
                         'google_id' => $googleId,
+                        'email_verified_at' => $user->email_verified_at ?? Carbon::now(),
                     ]);
                 }else{
                     $user = User::create([
@@ -40,6 +42,7 @@ class GoogleAuthController extends Controller
                         'email' => $email,
                         'password' => bcrypt(str()->random(8)),
                         'google_id' => $googleId,
+                        'email_verified_at' => Carbon::now(),
                     ]);
 
                     // Assign trial subscription to the new user

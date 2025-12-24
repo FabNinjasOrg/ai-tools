@@ -57,6 +57,11 @@ class RegisteredUserController extends Controller
 
         UserConsentController::syncConsentFromCookie($user->id);
 
+        // Redirect to email verification page if email is not verified
+        if (! $user->hasVerifiedEmail()) {
+            return redirect()->route('verification.notice');
+        }
+
         return redirect(route('face_finder.upload_photos'));
     }
 }

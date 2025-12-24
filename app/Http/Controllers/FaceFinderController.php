@@ -290,7 +290,7 @@ class FaceFinderController extends Controller
                     $this->cleanupZipFiles($zipData);
                     return [
                         'valid' => false,
-                        'message' => "ZIP file '{$originalName}' contains invalid file types. Only PNG, JPG, JPEG, and WEBP images are allowed.",
+                        'message' => "ZIP file '{$originalName}' contains invalid file types. Only PNG, JPG, JPEG, WEBP, AND HEIC images are allowed.",
                         'data' => []
                     ];
                 }

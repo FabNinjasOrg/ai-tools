@@ -5,6 +5,11 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
+        {{-- SEO --}}
+        <meta name="description" content="Face Finder is a tool for accurate face recognition and image analysis, designed to help you manage and organize your album of photos effortlessly.">
+        <meta name="keywords" content="Face Finder, Face Recognition, Image Analysis, Photo Management, Facial Detection, Album Organization, AI Photo Tool, Image Processing">
+        <meta name="author" content="FabNinjas Private Limited">
+
         <style>[x-cloak]{display:none!important}</style>
 
         <title>Face Finder</title>

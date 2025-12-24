@@ -32,6 +32,11 @@ class AuthenticatedSessionController extends Controller
         $user = Auth::user();
         if ($user) {
             UserConsentController::syncConsentFromCookie($user->id);
+
+            // Redirect to email verification page if email is not verified
+            if (! $user->hasVerifiedEmail()) {
+                return redirect()->route('verification.notice');
+            }
         }
 
         return redirect()->intended(route('face_finder.upload_photos'));

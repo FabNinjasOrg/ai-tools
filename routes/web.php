@@ -42,7 +42,7 @@ Route::prefix('face-finder')->group(function () {
     Route::get('/pricing', [SubscriptionController::class, 'pricing'])->name('face_finder.pricing');
     Route::get('/privacy-policy', [FaceFinderController::class, 'privacyPolicy'])->name('face_finder.privacy_policy');
 
-    Route::middleware('auth')->group(function () {
+    Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('upload-photos', [FaceFinderController::class, 'uploadPhotosPage'])->name('face_finder.upload_photos');
         Route::post('update-country-code', [FaceFinderController::class, 'updateCountryCode'])->name('face_finder.update_country_code');
         // Events routes
