@@ -27,11 +27,11 @@ Route::post('/summarybot', [ModelController::class, 'summaryBot'])->name('summar
 
 // routes for face finder app
 Route::prefix('face-finder')->group(function () {
-    Route::get('/webhook/whatsapp', [publicLinkController::class, 'verifyWebhook']);
-    Route::withoutMiddleware([MiddlewareVerifyCsrfToken::class])->post('/webhook/whatsapp', [publicLinkController::class, 'webhook']);
+    Route::get('/webhooks/whatsapp', [publicLinkController::class, 'verifyWebhook']);
+    Route::withoutMiddleware([MiddlewareVerifyCsrfToken::class])->post('/webhooks/whatsapp', [publicLinkController::class, 'webhook']);
 
     // razorpay route
-    Route::withoutMiddleware([MiddlewareVerifyCsrfToken::class])->post('/webhook/razorpay', [SubscriptionController::class, 'handleRazorpayWebhook'])->name('webhook.razorpay');
+    Route::withoutMiddleware([MiddlewareVerifyCsrfToken::class])->post('/webhooks/razorpay', [SubscriptionController::class, 'handleRazorpayWebhook'])->name('webhook.razorpay');
 
     // google oauth route
     Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirectToGoogle'])->name('google.redirect');
