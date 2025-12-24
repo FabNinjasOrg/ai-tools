@@ -945,10 +945,10 @@
                         }
 
                         const phoneNumber = '919429533400';
-                        const code = @json(env('WHATSAPP_CODE_FOR_REQUEST_PHOTOS'));
+                        const code = @json($uuid);
                         const message =
                             `Please send the following message as it is to request your photos:\n` +
-                            `code: ${code}`;
+                            `event code: ${code}`;
                         const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
 
                         window.open(whatsappUrl, '_blank');

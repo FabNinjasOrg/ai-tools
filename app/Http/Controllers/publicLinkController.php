@@ -484,53 +484,54 @@ class publicLinkController extends Controller
             $message = $messages[0];
             $phoneNumber = $contacts[0]['wa_id'] ?? null;
             $userMessage = trim($message['text']['body'] ?? '');
-            $code = '';
+            $eventCode = '';
 
-            if (preg_match('/code:\s*([A-Za-z0-9]{15})/i', $userMessage, $match)) {
-                $code = $match[1];
+            if (preg_match('/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/', $userMessage, $match)) {
+                $eventCode = $match[0];
 
-                if($code !== env('WHATSAPP_CODE_FOR_REQUEST_PHOTOS')){
-                    logger('Invalid code received: ' . $userMessage);
-                    return response()->json(['status' => 'invalid_webhook_code'], 200);
-                }
+                // if($eventCode !== env('WHATSAPP_CODE_FOR_REQUEST_PHOTOS')){
+                //     logger('Invalid code received: ' . $userMessage);
+                //     return response()->json(['status' => 'invalid_webhook_code'], 200);
+                // }
 
                 $getUserSessionFromPhoneNumber = OtpVerificationAttempt::query()
                     ->where('phone_number', '+'.$phoneNumber)
+                    ->where('event_uuid', $eventCode)
                     ->where('matched_found_photos', '>', 0)
                     ->first();
 
-                if ($getUserSessionFromPhoneNumber->last_whatsapp_photos_request_at) {
-                    $lastRequest = Carbon::parse(
-                        $getUserSessionFromPhoneNumber->last_whatsapp_photos_request_at
-                    );
-
-                    if ($lastRequest->gt(now()->subHour())) {
-                        $response = Http::withToken(env('WHATSAPP_TOKEN'))
-                            ->post('https://graph.facebook.com/v22.0/' . env('WHATSAPP_PHONE_NUMBER_ID') . '/messages',
-                                [
-                                    'messaging_product' => 'whatsapp',
-                                    'to' =>  ltrim($getUserSessionFromPhoneNumber->phone_number, '+'),
-                                    'type' => 'text',
-                                    'text' => [
-                                        'body' => 'You recently requested photos on WhatsApp. You can retry after one hour. Please try again later.',
-                                    ],
-                                ]
-                            );
-
-                        if ($response->failed()) {
-                            Log::error(
-                                "Failed to send WhatsApp document due to request time limit",
-                                [
-                                    'response' => $response->body(),
-                                ]
-                            );
-                        }
-
-                        return response()->json(['status' => 'fallback'], 200);
-                    }
-                }
-
                 if($getUserSessionFromPhoneNumber){
+                    if ($getUserSessionFromPhoneNumber->last_whatsapp_photos_request_at) {
+                        $lastRequest = Carbon::parse(
+                            $getUserSessionFromPhoneNumber->last_whatsapp_photos_request_at
+                        );
+
+                        if ($lastRequest->gt(now()->subHour())) {
+                            $response = Http::withToken(env('WHATSAPP_TOKEN'))
+                                ->post('https://graph.facebook.com/v22.0/' . env('WHATSAPP_PHONE_NUMBER_ID') . '/messages',
+                                    [
+                                        'messaging_product' => 'whatsapp',
+                                        'to' =>  $phoneNumber,
+                                        'type' => 'text',
+                                        'text' => [
+                                            'body' => 'You recently requested photos on WhatsApp. You can retry after one hour. Please try again later.',
+                                        ],
+                                    ]
+                                );
+
+                            if ($response->failed()) {
+                                Log::error(
+                                    "Failed to send WhatsApp document due to request time limit",
+                                    [
+                                        'response' => $response->body(),
+                                    ]
+                                );
+                            }
+
+                            return response()->json(['status' => 'fallback'], 200);
+                        }
+                    }
+
                     $matchedPhotos = $getUserSessionFromPhoneNumber->matched_photo_id_json ? json_decode($getUserSessionFromPhoneNumber->matched_photo_id_json, true) : [];
 
                     if($matchedPhotos && !empty($matchedPhotos)){
@@ -556,6 +557,7 @@ class publicLinkController extends Controller
                     }
                 } else {
                     logger('No matched photos found for phone number: ' . $phoneNumber);
+                    logger('No matched photos found for event uuid: ' . $eventCode);
                 }
             }else{
                 logger('Invalid message format received: ' . $userMessage);
