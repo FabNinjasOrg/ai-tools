@@ -1,0 +1,167 @@
+.services-section {
+    position: relative;
+    padding: 80px 0;
+    background: linear-gradient(135deg, rgb(248, 249, 250) 0%, rgb(233, 236, 239) 100%);
+    overflow: hidden;
+    font-family: 'Libre Franklin', sans-serif;
+}
+
+.services-badge {
+    display: inline-block;
+    clip-path: polygon(0px 0px, calc(100% - 8px) 0px, 100% 100%, 8px 100%);
+    color: rgb(233, 157, 117);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, rgba(233, 157, 117, 0.15) 0%, rgba(119, 100, 130, 0.15) 100%);
+    border-width: 2px;
+    border-style: solid;
+    border-color: rgba(233, 157, 117, 0.4);
+    border-image: initial;
+    padding: 8px 24px;
+    transition: 0.3s;
+}
+
+.services-title {
+    font-size: 48px;
+    font-weight: 800;
+    color: rgb(40, 38, 67);
+    margin: 0 0 10px;
+    text-transform: uppercase;
+    font-family: 'Libre Franklin', sans-serif;
+}
+
+.services-subtitle {
+    font-size: 18px;
+    color: rgb(102, 102, 102);
+    margin: 0 auto 30px;
+    max-width: 800px;
+    font-family: 'Libre Franklin', sans-serif;
+}
+
+.service-box {
+    background-color: rgb(255, 255, 255);
+    padding: 25px 20px;
+    border-radius: 0;
+    box-shadow: rgba(0, 0, 0, 0.08) 0px 8px 25px 0px;
+    border: 1px solid rgba(233, 157, 117, 0.1);
+    min-height: 381.812px;
+    height: auto;
+    transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Libre Franklin', sans-serif;
+    display: flex;
+    flex-direction: column;
+}
+
+.service-box:hover {
+    box-shadow: rgba(0, 0, 0, 0.15) 0px 12px 35px 0px;
+    border: 2px solid rgba(233, 157, 117, 0.5);
+}
+
+.service-box h4::before {
+    content: "";
+    position: absolute;
+    left: 0px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 20px;
+    background: linear-gradient(135deg, rgb(233, 157, 117) 0%, rgb(119, 100, 130) 100%);
+    border-radius: 2px;
+}
+
+.service-box h4 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: rgb(40, 38, 67);
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: relative;
+    padding-left: 20px;
+}
+
+.service-box p {
+    font-size: 16px;
+    color: rgb(102, 102, 102);
+    line-height: 1.6;
+    margin-bottom: 20px;
+    font-family: 'Libre Franklin', sans-serif;
+}
+
+.service-features {
+    list-style: none;
+    padding: 0 0 0 20px;
+    margin: 0;
+    color: rgb(33, 37, 41);
+    font-size: 16px;
+    font-family: 'Libre Franklin', sans-serif;
+}
+
+.service-features li {
+    margin-bottom: 10px;
+    position: relative;
+    padding-left: 5px;
+    font-family: 'Libre Franklin', sans-serif;
+}
+
+.service-features li::before {
+    content: "→";
+    position: absolute;
+    left: -20px;
+    color: rgb(233, 157, 117);
+    font-weight: bold;
+}
+
+.service-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, rgb(233, 157, 117) 0%, rgb(119, 100, 130) 100%);
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Libre Franklin', sans-serif;
+    margin-top: 15px;
+    width: fit-content;
+}
+
+.service-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: rgba(233, 157, 117, 0.4) 0px 8px 20px 0px;
+    background: linear-gradient(135deg, rgb(217, 119, 68) 0%, rgb(100, 80, 110) 100%);
+}
+
+.service-btn svg {
+    margin-left: 8px;
+    transition: transform 0.3s;
+}
+
+.service-btn:hover svg {
+    transform: translateX(4px);
+}
+
+@media (max-width: 768px) {
+    .services-title {
+        font-size: 32px;
+    }
+
+    .services-subtitle {
+        font-size: 16px;
+        margin: 0 0 20px;
+    }
+
+    .service-box {
+        height: auto;
+        min-height: 300px;
+    }
+}
+
