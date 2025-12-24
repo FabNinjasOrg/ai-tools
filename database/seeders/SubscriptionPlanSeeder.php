@@ -18,7 +18,7 @@ class SubscriptionPlanSeeder extends Seeder
             // Monthly Plans
             [
                 'name' => 'Basic Monthly',
-                'razorpay_plan_id' => 'plan_RbBJXn4WELE4cl',
+                'razorpay_plan_id' => 'plan_RvMa7T9asp95Jx',
                 'storage' => '5GB',
                 'status' => 'active',
                 'created_at' => now(),
@@ -26,7 +26,7 @@ class SubscriptionPlanSeeder extends Seeder
             ],
             [
                 'name' => 'Standard Monthly',
-                'razorpay_plan_id' => 'plan_RbBSDFcevGrKq6',
+                'razorpay_plan_id' => 'plan_RvMbdb31oG61Fu',
                 'storage' => '10GB',
                 'status' => 'active',
                 'created_at' => now(),
@@ -34,7 +34,7 @@ class SubscriptionPlanSeeder extends Seeder
             ],
             [
                 'name' => 'Pro Monthly',
-                'razorpay_plan_id' => 'plan_RbBU89l7FBoLmM',
+                'razorpay_plan_id' => 'plan_RvMcLa6GpS8tyR',
                 'storage' => '20GB',
                 'status' => 'active',
                 'created_at' => now(),
@@ -43,7 +43,7 @@ class SubscriptionPlanSeeder extends Seeder
             // Yearly Plans
             [
                 'name' => 'Basic Yearly',
-                'razorpay_plan_id' => 'plan_RbBQf3O0rJgXIv',
+                'razorpay_plan_id' => 'plan_RvMf1zQzAwOGJj',
                 'storage' => '5GB',
                 'status' => 'active',
                 'created_at' => now(),
@@ -51,7 +51,7 @@ class SubscriptionPlanSeeder extends Seeder
             ],
             [
                 'name' => 'Standard Yearly',
-                'razorpay_plan_id' => 'plan_RbBSsFJ3jKOERj',
+                'razorpay_plan_id' => 'plan_RvMfeeJXdfrsVK',
                 'storage' => '10GB',
                 'status' => 'active',
                 'created_at' => now(),
@@ -59,7 +59,7 @@ class SubscriptionPlanSeeder extends Seeder
             ],
             [
                 'name' => 'Pro Yearly',
-                'razorpay_plan_id' => 'plan_RbBTYYqU3O7ooP',
+                'razorpay_plan_id' => 'plan_RvMfyaG3C9hguh',
                 'storage' => '20GB',
                 'status' => 'active',
                 'created_at' => now(),
@@ -82,7 +82,7 @@ class SubscriptionPlanSeeder extends Seeder
             // Monthly Plan Prices
             [
                 'subscription_plan_id' => $basicMonthly->id,
-                'inr_price' => 399.00,
+                'inr_price' => 199.00,
                 'usd_price' => 4.99,
                 'status' => 'active',
                 'created_at' => now(),
@@ -90,7 +90,7 @@ class SubscriptionPlanSeeder extends Seeder
             ],
             [
                 'subscription_plan_id' => $standardMonthly->id,
-                'inr_price' => 799.00,
+                'inr_price' => 399.00,
                 'usd_price' => 9.99,
                 'status' => 'active',
                 'created_at' => now(),
@@ -98,7 +98,7 @@ class SubscriptionPlanSeeder extends Seeder
             ],
             [
                 'subscription_plan_id' => $proMonthly->id,
-                'inr_price' => 1599.00,
+                'inr_price' => 799.00,
                 'usd_price' => 19.99,
                 'status' => 'active',
                 'created_at' => now(),
@@ -107,7 +107,7 @@ class SubscriptionPlanSeeder extends Seeder
             // Yearly Plan Prices
             [
                 'subscription_plan_id' => $basicYearly->id,
-                'inr_price' => 3999.00,
+                'inr_price' => 2189.00,
                 'usd_price' => 49.99,
                 'status' => 'active',
                 'created_at' => now(),
@@ -115,7 +115,7 @@ class SubscriptionPlanSeeder extends Seeder
             ],
             [
                 'subscription_plan_id' => $standardYearly->id,
-                'inr_price' => 7999.00,
+                'inr_price' => 4389.00,
                 'usd_price' => 99.99,
                 'status' => 'active',
                 'created_at' => now(),
@@ -123,7 +123,7 @@ class SubscriptionPlanSeeder extends Seeder
             ],
             [
                 'subscription_plan_id' => $proYearly->id,
-                'inr_price' => 15999.00,
+                'inr_price' => 8789.00,
                 'usd_price' => 199.99,
                 'status' => 'active',
                 'created_at' => now(),
