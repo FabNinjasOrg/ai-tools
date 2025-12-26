@@ -23,15 +23,10 @@ class GlobalRequestCounter
             return $next($request);
         }
 
-        // Initialize global request count if not present and reset after 24 hours
-        Cache::remember('global_request_count', 86400, fn () => 0);
+        $count = Cache::add('global_request_count', 0, 86400) ? 1 : Cache::increment('global_request_count');
 
-        // Increment global request count
-        $count = Cache::increment('global_request_count');
-
-        // Send email every time requests cross a multiple of 10
-        // (10, 20, 30, ...)
-        if ($count % 10 === 0) {
+        // Send email every time requests cross a multiple of 500
+        if ($count % 500 === 0) {
             Mail::raw(
                 "Attention: Server has received {$count} total requests.",
                 function ($message) {
