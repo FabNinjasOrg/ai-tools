@@ -26,6 +26,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'razorpay_customer_id',
         'stripe_customer_id',
         'country_code',
+        'email_verified_at',
     ];
 
     /**
