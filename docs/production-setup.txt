@@ -13,19 +13,15 @@ sudo docker run hello-world
 sudo apt install gh
 https://github.com/login/device
 
-# Run these commands on your host machine
-Set .env file
-mkdir -p storage/framework/{sessions,views,cache/data}
-mkdir -p bootstrap/cache
-chmod -R 775 storage bootstrap/cache
+# Git clone
 
 # Run composer install
 sudo docker compose up -d --build
-sudo docker compose run --rm app composer install
-sudo docker compose exec app php artisan migrate
-sudo docker compose exec app php artisan key:generate
 
 # setup tailwind and build resources
-sudo docker compose exec app npm install
-sudo docker compose exec app npm install -D tailwindcss postcss autoprefixer
+sudo docker compose exec app php artisan migrate
 sudo docker compose exec app npm run build
+
+Note:
+    - for env file creation and values fetching, we have used aws parameter store.
+    - Host machine project directory mounted into docker compose for allowing run time file changes.
