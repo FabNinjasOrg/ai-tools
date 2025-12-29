@@ -63,7 +63,7 @@ class GoogleAuthController extends Controller
 
             return redirect()->route('face_finder.upload_photos');
         } catch (\Exception $e) {
-            return redirect('/login')->with('error', 'Failed to login with Google: ' . $e->getMessage());
+            return redirect()->route('face_finder')->with('error', 'Failed to login with Google: ' . $e->getMessage());
         }
     }
 }
