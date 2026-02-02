@@ -53,10 +53,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && docker-php-ext-install pdo pdo_mysql zip intl mbstring bcmath gd \
     && pecl install imagick \
     && docker-php-ext-enable imagick \
-    && curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/awscliv2.zip" \
-    && unzip /awscliv2.zip \
-    && ./aws/install \
-    && rm -rf /aws /awscliv2.zip \
+    # && curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/awscliv2.zip" \
+    # && unzip /awscliv2.zip \
+    # && ./aws/install \
+    # && rm -rf /aws /awscliv2.zip \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy application code
