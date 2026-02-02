@@ -39,6 +39,9 @@ services:
       - laravel-net
 
   scheduler-and-queue:
+    build:
+        context: .
+        dockerfile: Dockerfile
     image: face_finder_app
     container_name: laravel_scheduler_and_queue
     command: ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf", "-n"]
