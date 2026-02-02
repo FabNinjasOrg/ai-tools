@@ -86,6 +86,6 @@ RUN chown -R www-data:www-data storage bootstrap/cache \
 EXPOSE 9000
 
 # Entrypoint script execution
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 CMD ["php-fpm"]
