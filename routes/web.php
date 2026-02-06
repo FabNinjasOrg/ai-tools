@@ -14,9 +14,9 @@ use App\Http\Controllers\UserConsentController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken as MiddlewareVerifyCsrfToken;
 
-Route::get('/', function () {
-    return view('welcome');
-})->name('home');
+// Route::get('/', function () {
+//     return view('welcome');
+// })->name('home');
 
 Route::get('/text-generation', [ModelController::class, 'textGeneration'])->name('text_generation');
 Route::get('/summary-generation', [ModelController::class, 'summaryGeneration'])->name('summary_generation');
@@ -26,7 +26,7 @@ Route::post('/summarybot', [ModelController::class, 'summaryBot'])->name('summar
 // Route::post('/mediaAnalysis', [ModelController::class, 'mediaAnalysis'])->name('mediaAnalysis');
 
 // routes for face finder app
-Route::prefix('face-finder')->group(function () {
+// Route::prefix('face-finder')->group(function () {
     Route::get('/webhooks/whatsapp', [publicLinkController::class, 'verifyWebhook']);
     Route::withoutMiddleware([MiddlewareVerifyCsrfToken::class])->post('/webhooks/whatsapp', [publicLinkController::class, 'webhook']);
 
@@ -99,10 +99,11 @@ Route::prefix('face-finder')->group(function () {
     // few common routes
     Route::post('events/{uuid}/upload-photos', [FaceFinderController::class, 'uploadPhotosForEvent'])->name('face_finder.events.upload_photos');
     Route::post('check-batch-status', [FaceFinderController::class, 'checkBatchStatus'])->name('face_finder.check_batch_status');
-});
+// });
 
 // public link routes
-Route::prefix('face-finder/public')->group(function () {
+// Route::prefix('face-finder/public')->group(function () {
+Route::prefix('public')->group(function () {
     Route::post('find-photos', [publicLinkController::class, 'findPhotos'])->name('face_finder.public.find_photos');
     Route::get('{uuid}/matched-photos', [publicLinkController::class, 'loadMatchedPhotos'])->name('face_finder.public.matched_photos');
     Route::post('{uuid}/otp-attempt', [publicLinkController::class, 'logOtpAttempt'])->name('face_finder.public.otp_attempt');
@@ -116,7 +117,6 @@ Route::prefix('face-finder/public')->group(function () {
     Route::post('save-guest-consent', [UserConsentController::class, 'saveGuestConsent'])->name('face_finder.public.save_guest_consent');
 });
 
-// Authentication routes (added by Laravel Breeze) with face-finder URL prefix
-Route::prefix('face-finder')->group(function () {
+// Route::prefix('face-finder')->group(function () {
     require __DIR__.'/auth.php';
-});
+// });
