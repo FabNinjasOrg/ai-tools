@@ -14,7 +14,7 @@
 
         <title>Face Finder</title>
 
-        <link rel="icon" type="image/svg+xml" href="/favicon_ff.svg">
+        <link rel="icon" type="image/svg+xml" href="{{ asset('favicon_ff.svg') }}">
         <link rel="alternate icon" href="/favicon.ico">
 
         <!-- Fonts -->
