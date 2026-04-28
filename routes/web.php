@@ -70,7 +70,7 @@ Route::post('/summarybot', [ModelController::class, 'summaryBot'])->name('summar
         Route::post('albums/share-uploader-link', [uploaderLinkController::class, 'shareUploaderLink'])->name('face_finder.albums.share_uploader_link');
 
         // storage routes
-        Route::get('storage', [StorageController::class, 'index'])->name('face_finder.storage');
+        Route::get('manage-storage', [StorageController::class, 'index'])->name('face_finder.manage_storage');
 
         // profile routes
         Route::get('profile', [ProfileController::class, 'edit'])->name('face_finder.profile.edit');
