@@ -18,7 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
         ]);
 
-        // Trust all proxies so Laravel detects HTTPS correctly
+        // Trust all proxies so laravel app detects HTTPS correctly
         $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
