@@ -1,0 +1,38 @@
+Name: Face Finder
+
+PHP Version: 8.2
+
+Laravel: 12.0
+
+Nodejs Version: 20
+
+NPM Version: 10.x
+
+Additional packages used:
+
+    - aws/aws-sdk-php
+    - laravel/socialite
+    - razorpay/razorpay
+    - yajra/laravel-datatables-oracle
+    - laravel/breeze
+
+External API services used:
+
+    - AWS s3
+        - For photos storing over the aws s3 and user wise storage occupie calculation.
+
+    - Google Oauth client
+        - For google login/signup option.
+
+    - Razorpay payment gateway
+        - For subscription/payment we have used razorpay gateway which supports UPI.
+
+    - Whatsapp apis
+        - For matched photos sharing via whatsapp.
+
+    - Custom made python fastapi apis
+        - Python APIs for generating the face vectors and matching the scanned faces.
+        - You can checkout the folder 'fast-api-face-rec'. which contains the custom coded apis.
+        - Python dependencies used:
+            - Insightface model (for face recognition)
+            - Numpy (for mathemetics calculations)

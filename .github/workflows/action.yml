@@ -1,0 +1,42 @@
+name: CI/CD Build & Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - testing
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run Artisan Commands on EC2 docker container
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          timeout: 120s
+          script: |
+            set -e
+
+            echo "Checking if face_finder_app container is running..."
+
+            while true; do
+              if sudo docker ps --format '{{.Names}}' | grep -q '^face_finder_app$'; then
+                echo "face_finder_app is now running"
+                break
+              fi
+
+              sleep 5
+            done
+
+            echo "face_finder_app container is running"
+
+            echo "Running migrations..."
+            sudo docker exec face_finder_app php artisan migrate --force
+
+            echo "Running optimize clear..."
+            sudo docker exec face_finder_app php artisan optimize:clear

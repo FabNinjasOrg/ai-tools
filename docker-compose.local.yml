@@ -1,0 +1,78 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+    image: face_finder_app
+    container_name: face_finder_app
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      - mysql
+    networks:
+      - laravel-net
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: laravel_nginx
+    ports:
+      - "8082:80"
+    volumes:
+      - ./:/var/www/html
+      - ./nginx-local.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      - laravel-net
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_DATABASE: laravel
+      MYSQL_ROOT_PASSWORD: laravel
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - laravel-net
+
+  scheduler-and-queue:
+    image: face_finder_app
+    container_name: laravel_scheduler_and_queue
+    command: ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf", "-n"]
+    depends_on:
+      app:
+        condition: service_started
+      face-recognition-apis:
+        condition: service_healthy
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - laravel-net
+
+  face-recognition-apis:
+    build:
+      context: ./fast-api-face-rec
+      dockerfile: Dockerfile
+    container_name: face_recognition_apis
+    ports:
+      - "8005:8005"
+    networks:
+      - laravel-net
+    depends_on:
+      - app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/docs"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+volumes:
+  db_data:
+
+networks:
+  laravel-net:
+    driver: bridge

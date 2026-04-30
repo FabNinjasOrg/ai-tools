@@ -1,0 +1,87 @@
+Dockerized Setup for FaceFinder:
+
+Step 1:
+    - Take git clone into your device
+    - Clone link : git@github.com:FabNinjasOrg/ai-tools.git
+    - Switch to branch name "testing-facefinder".
+
+Step 2:
+    - Configure the env file for the project.
+        - Generate app key if necessary
+        - Update the env with below listed env variables to complete the env setup.
+
+Step 3:
+    - Run the docker related commands for dockerized project setup.
+        - command: sudo docker compose -f docker-compose.local.yml build
+        - command: sudo docker compose -f docker-compose.local.yml up -d
+    - These commands will build the necessary containers and start them.
+
+    Note: Local project directory will be mounted on the docker app container so, locally made changes of files will be reflect by docker on run time.
+
+Step 4:
+    - List out the running docker containers
+        - command: docker ps
+    - Open execution terminal for the project container
+        - command: docker exec -it <container_name> sh
+    - Now run the migrations into container
+        - command: php artisan migrate
+
+step 5:
+    - Build the assets for the project into container
+    - Execute the below command into project container
+        - command: npm run build
+
+step 6:
+    - Setup database connection locally into tableplus
+        - Host/IP: 127.0.0.1
+        - port: 3307
+        - user: root
+        - password: laravel
+        - database: laravel
+        - ssl mode: REQUIRED
+    - Test connection
+
+Step 7:
+    - You can access the project on port 8082, for more info check containers into docker.
+    - http://localhost:8082
+
+Note:
+    - Below is the list of features will not work locally as it's requires the https setup
+        - Razorpay payment gateway
+        - Whatsapp share
+
+==================================
+
+Important ENV variables for complete the project setup:
+
+Local project running over the 8082 port:
+    APP_URL=http://localhost:8082
+
+Database:
+    DB_CONNECTION=mysql
+    DB_HOST=mysql
+    DB_PORT=3306
+    DB_DATABASE=laravel
+    DB_USERNAME=root
+    DB_PASSWORD=laravel
+
+Email SMTP setup:
+    MAIL_MAILER=smtp
+    MAIL_HOST=smtp.gmail.com
+    MAIL_PORT=587
+    MAIL_USERNAME=sandboxfabninjas@gmail.com
+    MAIL_PASSWORD="emqdyicqvkbcafvf"
+    MAIL_ENCRYPTION=tls
+    MAIL_FROM_ADDRESS=sandboxfabninjas@gmail.com
+    MAIL_FROM_NAME="Face Finder"
+
+AWS s3 service setup:
+    Ask authorized person for the credentials.
+
+Google oauth service:
+    GOOGLE_CLIENT_ID="1097987786862-qb6kt6p0uvj00gm1tfo6kc4u2uh5kkur.apps.googleusercontent.com"
+    GOOGLE_CLIENT_SECRET="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"
+    GOOGLE_REDIRECT="http://localhost:8082/face-finder/auth/google/callback"
+
+Python fast api access point:
+    FASTAPI_BASE_URL="http://face-recognition-apis:8005"

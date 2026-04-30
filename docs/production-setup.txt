@@ -1,0 +1,27 @@
+# Docker setup
+sudo apt update
+sudo apt install -y ca-certificates curl gnupg lsb-release
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+docker --version
+sudo docker run hello-world
+
+# git install
+sudo apt install gh
+https://github.com/login/device
+
+# Git clone
+
+# Run composer install
+sudo docker compose up -d --build
+
+# setup tailwind and build resources
+sudo docker compose exec app php artisan migrate
+sudo docker compose exec app npm run build
+
+Note:
+    - for env file creation and values fetching, we have used aws parameter store.
+    - Host machine project directory mounted into docker compose for allowing run time file changes.

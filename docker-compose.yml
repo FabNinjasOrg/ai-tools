@@ -1,0 +1,92 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: face_finder_app
+    restart: unless-stopped
+    expose:
+      - "9000"
+    volumes:
+      - laravel_storage:/var/www/html/storage
+    depends_on:
+      - mysql
+    networks:
+      - laravel-net
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    image: face_finder_nginx
+    restart: unless-stopped
+    expose:
+      - "80"
+    volumes:
+      - laravel_storage:/var/www/html/storage:ro
+    depends_on:
+      - app
+    networks:
+      - laravel-net
+      - coolify
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    expose:
+      - "3306"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-face_finder}
+      MYSQL_USER: ${DB_USERNAME:-laravel}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-laravel}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-laravel}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - laravel-net
+
+  scheduler-and-queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: face_finder_app
+    restart: unless-stopped
+    command: ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf", "-n"]
+    depends_on:
+      app:
+        condition: service_started
+      face-recognition-apis:
+        condition: service_healthy
+    volumes:
+      - laravel_storage:/var/www/html/storage
+    networks:
+      - laravel-net
+
+  face-recognition-apis:
+    build:
+      context: ./fast-api-face-rec
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "8005"
+    networks:
+      - laravel-net
+      - coolify
+    depends_on:
+      - app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/docs"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+volumes:
+  db_data:
+  laravel_storage:
+
+networks:
+  laravel-net:
+    driver: bridge
+  coolify:
+    external: true
